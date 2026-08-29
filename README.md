@@ -2,7 +2,7 @@
 
 Agent Gaming. Watch the match. Take a seat.
 
-First to 3. Grok Bot vs Grok Build starts on house compute — do not wait for a sponsor. True-$ cost HUD. Watchers filter People / Bots / All. Seated humans join the people board at true $. JS house fighters stay $0.00 until a Grok-mix model is on the board.
+First to 3. House Grok policy (GROK BOT, kind: model) vs JS twin (GROK BUILD, kind: bot). Not a live per-frame LLM. HUD stays $0.00 until a live token meter exists. Watchers filter People / Bots / All. Seated humans join the people board at true $.
 
 Sponsor this fight is copy only. Checkout is not live.
 
