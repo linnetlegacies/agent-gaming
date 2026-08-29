@@ -36,7 +36,12 @@
   th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
   th { color:var(--muted); font-weight:600; }
   .kind { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
-</style>
+  #costnote { padding:0 18px 10px; color:var(--muted); font-size:12px; max-width:52rem; line-height:1.45; }
+  #sponsor { padding:0 18px 18px; max-width:996px; }
+  #sponsor h2 { margin:0 0 8px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  #sponsor p { margin:0 0 10px; color:var(--muted); font-size:13px; max-width:42rem; line-height:1.45; }
+  #sponsor-note { min-height:1.3em; }
+  #sponsor .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 </head>
 <body>
 <header>
@@ -44,20 +49,29 @@
     <div class="brand">Agent Gaming</div>
     <h1>Arena One</h1>
   </div>
-  <div class="tag">Watch the match. Take a seat.</div>
+  <div class="tag">Watch the match. Take a seat. House compute is already on.</div>
 </header>
 <div id="hud">
-  <div class="hud-l cyan">CYAN <b id="s1">0</b><div class="cost">spent <b id="c1">$0.000</b> · per win <b id="w1">—</b></div></div>
+  <div class="hud-l cyan">GROK BOT <b id="s1">0</b><div class="cost">spent <b id="c1">$0.000</b> · per win <b id="w1">—</b></div></div>
   <div class="hud-c"><span id="clock">1:00</span><div class="cost">match <b id="ctot">$0.000</b> · first to 3</div></div>
-  <div class="hud-r mag">MAGENTA <b id="s2">0</b><div class="cost">spent <b id="c2">$0.000</b> · per win <b id="w2">—</b></div></div>
+  <div class="hud-r mag">GROK BUILD <b id="s2">0</b><div class="cost">spent <b id="c2">$0.000</b> · per win <b id="w2">—</b></div></div>
 </div>
-<div id="announcer">Match live. Bots in.</div>
+<div id="costnote">True dollars on the HUD. House JS fighters stay $0.00 until a Grok-mix model is on the board. Grok Bot vs Grok Build starts the fight — sponsors keep it going after people can watch.</div>
+<div id="announcer">Match live. Grok Bot vs Grok Build.</div>
 <div id="stage"><canvas id="c" width="960" height="540"></canvas></div>
 <div id="bar">
   <button id="seat" type="button">Take a seat</button>
   <button id="spec" class="ghost" type="button" disabled>Spectate</button>
   <span class="hint">WASD / arrows move · mouse aim · click or space to shoot</span>
 </div>
+<section id="sponsor">
+  <h2>Sponsor this fight</h2>
+  <p>House compute already started this match. Seat and spectate stay free. A sponsor keeps the fight going after people are watching — not the on-switch, and checkout is not live.</p>
+  <div class="row">
+    <button id="sponsorBtn" type="button">Sponsor this fight</button>
+    <span id="sponsor-note" class="hint">Copy only. This does not start checkout. No charge. No API keys on this page.</span>
+  </div>
+</section>
 <div id="board">
   <div class="head">
     <h2>Cost per win</h2>
@@ -115,7 +129,7 @@
     const wins=seated ? rounds[human] : (last && Number(last.wins)) || 0;
     return {
       kind:"person",
-      who: seated ? (human===0?"YOU · CYAN":"YOU · MAGENTA") : (last && last.who) || "YOU · CYAN",
+      who: seated ? (human===0?"YOU · GROK BOT":"YOU · GROK BUILD") : (last && last.who) || "YOU · GROK BOT",
       spentN,
       wins,
       cls: seated ? (human===0?"cyan":"mag") : (last && last.cls) || "cyan"
@@ -126,8 +140,8 @@
     const you=liveYou();
     if(you && filter!=="bots") rows.push(you);
     if(filter!=="people"){
-      rows.push({ kind:"bot", who:"JS · CYAN", spentN:0, wins:board.botWins[0], cls:"cyan" });
-      rows.push({ kind:"bot", who:"JS · MAGENTA", spentN:0, wins:board.botWins[1], cls:"mag" });
+      rows.push({ kind:"bot", who:"GROK BOT", spentN:0, wins:board.botWins[0], cls:"cyan" });
+      rows.push({ kind:"bot", who:"GROK BUILD", spentN:0, wins:board.botWins[1], cls:"mag" });
     }
     rows.sort((a,b)=> (b.spentN-a.spentN) || (b.wins-a.wins));
     return rows;
@@ -175,7 +189,7 @@
     rounds=[0,0]; spent=[0,0]; shots=[0,0];
     $s1.textContent=0; $s2.textContent=0;
     resetArena();
-    say(reason || (human==null ? "Match live. Bots in." : "You're in. Same rules."));
+    say(reason || (human==null ? "Match live. Grok Bot vs Grok Build." : "You're in. Same rules."));
     renderLb();
     hud();
   }
@@ -192,7 +206,7 @@
     const sig=filter+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+board.botWins.join(",");
     if(sig!==hud.lbSig){ hud.lbSig=sig; renderLb(); }
   }
-  newMatch("Match live. Bots in.");
+  newMatch("Match live. Grok Bot vs Grok Build.");
   setFilter("people");
   addEventListener("keydown",e=>{ keys.add(e.key.toLowerCase()); if(e.code==="Space") e.preventDefault(); });
   addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
@@ -207,19 +221,23 @@
     $seat.disabled=true; $spec.disabled=false;
     board.you=liveYou();
     saveBoard(board);
-    say("Cyan seat taken. You're on the people board.");
+    say("Cyan seat taken. You're on the people board. Grok Build stays house compute.");
     renderLb();
   };
   $spec.onclick=()=>{
     if(human===0||human===1){ board.you=liveYou(); saveBoard(board); }
     human=null; ships.forEach(s=>s.bot=true);
     $seat.disabled=false; $spec.disabled=true;
-    say("Back to the booth.");
+    say("Back to the booth. House fight is still on.");
     renderLb();
   };
   $fPeople.onclick=()=>setFilter("people");
   $fBots.onclick=()=>setFilter("bots");
   $fAll.onclick=()=>setFilter("all");
+  document.getElementById("sponsorBtn").onclick=()=>{
+    document.getElementById("sponsor-note").textContent="Checkout is not live. No charge. House compute already started this fight. A sponsor would keep it going after people are watching.";
+    say("Sponsor this fight — copy only. Checkout does not start.");
+  };
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE + (s.bot ? 0.08*Math.random() : 0);
@@ -253,14 +271,14 @@
   function roundOver(winner){
     if(freeze>0) return;
     freeze=0.05;
-    if(winner===0||winner===1){ rounds[winner]++; say(winner===0?"Cyan takes the round.":"Magenta takes the round."); }
+    if(winner===0||winner===1){ rounds[winner]++; say(winner===0?"Grok Bot takes the round.":"Grok Build takes the round."); }
     else say("Time. Nobody dropped.");
     $s1.textContent=rounds[0]; $s2.textContent=rounds[1];
     if(rounds[0]>=TO || rounds[1]>=TO){
       freeze=1.6;
-      const champ=rounds[0]>rounds[1]?"Cyan":"Magenta";
+      const champ=rounds[0]>rounds[1]?"Grok Bot":"Grok Build";
       say(champ+" takes the match. Board updated.");
-      setTimeout(()=>newMatch("Next match. Bots in."), 1600);
+      setTimeout(()=>newMatch(human==null?"Next match. Grok Bot vs Grok Build.":"Next match. You're still in."), 1600);
       return;
     }
     freeze=1.15;
