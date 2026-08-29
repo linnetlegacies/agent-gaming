@@ -27,10 +27,15 @@
   button:disabled { opacity:.4; cursor:default; }
   .hint { color:var(--muted); font-size:12px; }
   #board { padding:0 18px 18px; }
-  #board h2 { margin:0 0 8px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  #board .head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  #board h2 { margin:0; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .seg button { border-radius:0; background:transparent; color:var(--muted); padding:7px 12px; font-size:12px; font-weight:700; border:0; }
+  .seg button.on { background:var(--ink); color:var(--bg); }
   table { width:100%; max-width:960px; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
   th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
   th { color:var(--muted); font-weight:600; }
+  .kind { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -54,9 +59,16 @@
   <span class="hint">WASD / arrows move · mouse aim · click or space to shoot</span>
 </div>
 <div id="board">
-  <h2>Cost per win</h2>
+  <div class="head">
+    <h2>Cost per win</h2>
+    <div class="seg" role="group" aria-label="Leaderboard filter">
+      <button type="button" id="f-people" data-filter="people">People</button>
+      <button type="button" id="f-bots" data-filter="bots">Bots</button>
+      <button type="button" id="f-all" data-filter="all">All</button>
+    </div>
+  </div>
   <table>
-    <thead><tr><th>When</th><th>Winner</th><th>Score</th><th>Match cost</th><th>Cost / win</th></tr></thead>
+    <thead><tr><th>#</th><th>Who</th><th>Kind</th><th>Spent</th><th>Wins</th><th>Cost / win</th></tr></thead>
     <tbody id="lb"></tbody>
   </table>
 </div>
@@ -71,21 +83,75 @@
   const $clock=document.getElementById("clock"), $ann=document.getElementById("announcer");
   const $ctot=document.getElementById("ctot"), $lb=document.getElementById("lb");
   const $seat=document.getElementById("seat"), $spec=document.getElementById("spec");
+  const $fPeople=document.getElementById("f-people"), $fBots=document.getElementById("f-bots"), $fAll=document.getElementById("f-all");
   const keys=new Set();
   let mouse={x:W/2,y:H/2,down:false};
   let human=null, rounds=[0,0], tLeft=ROUND, last=performance.now();
   let freeze=0, spent=[0,0], shots=[0,0];
   const money=n=>"$"+n.toFixed(3);
+  const money0="$0.00";
   const perWin=(side)=> rounds[side] ? money(spent[side]/rounds[side]) : "—";
   const say=s=>{ $ann.textContent=s; };
   const ships=[], bullets=[];
-  const LBKEY="ag-arena-one-lb";
-  function loadLb(){ try { return JSON.parse(localStorage.getItem(LBKEY)||"[]"); } catch(e){ return []; } }
-  function saveLb(rows){ try { localStorage.setItem(LBKEY, JSON.stringify(rows.slice(0,12))); } catch(e){} }
-  function renderLb(){
-    const rows=loadLb();
-    $lb.innerHTML = rows.length ? rows.map(r=>`<tr><td>${r.when}</td><td class="${r.who==="CYAN"?"cyan":r.who==="MAGENTA"?"mag":""}">${r.who}</td><td>${r.score}</td><td>${r.cost}</td><td>${r.cpw}</td></tr>`).join("") : `<tr><td colspan="5">No finished matches yet. Watch a fight to 3.</td></tr>`;
+  const LBKEY="ag-arena-one-lb-v2";
+  let filter="people";
+  function loadBoard(){
+    try {
+      const raw=JSON.parse(localStorage.getItem(LBKEY)||"null");
+      if(!raw || typeof raw!=="object") return { you:null, botWins:[0,0] };
+      const you=raw.you && raw.you.kind==="person" ? raw.you : null;
+      const botWins=Array.isArray(raw.botWins) ? [Number(raw.botWins[0])||0, Number(raw.botWins[1])||0] : [0,0];
+      return { you, botWins };
+    } catch(e){ return { you:null, botWins:[0,0] }; }
   }
+  function saveBoard(b){ try { localStorage.setItem(LBKEY, JSON.stringify(b)); } catch(e){} }
+  let board=loadBoard();
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+  function liveYou(){
+    if(human!==0 && human!==1 && !board.you) return null;
+    const seated=human===0||human===1;
+    const last=board.you;
+    const spentN=seated ? spent[human] : (last && Number(last.spentN)) || 0;
+    const wins=seated ? rounds[human] : (last && Number(last.wins)) || 0;
+    return {
+      kind:"person",
+      who: seated ? (human===0?"YOU · CYAN":"YOU · MAGENTA") : (last && last.who) || "YOU · CYAN",
+      spentN,
+      wins,
+      cls: seated ? (human===0?"cyan":"mag") : (last && last.cls) || "cyan"
+    };
+  }
+  function boardRows(){
+    const rows=[];
+    const you=liveYou();
+    if(you && filter!=="bots") rows.push(you);
+    if(filter!=="people"){
+      rows.push({ kind:"bot", who:"JS · CYAN", spentN:0, wins:board.botWins[0], cls:"cyan" });
+      rows.push({ kind:"bot", who:"JS · MAGENTA", spentN:0, wins:board.botWins[1], cls:"mag" });
+    }
+    rows.sort((a,b)=> (b.spentN-a.spentN) || (b.wins-a.wins));
+    return rows;
+  }
+  function renderLb(){
+    const rows=boardRows();
+    if(!rows.length){
+      $lb.innerHTML = `<tr><td colspan="6">${filter==="people"?"No people on the board. Take a seat.":"No bots on the board."}</td></tr>`;
+      return;
+    }
+    $lb.innerHTML = rows.map((r,i)=>{
+      const cost=r.kind==="bot" ? money0 : money(r.spentN);
+      const cpw=r.kind==="bot" ? money0 : (r.wins ? money(r.spentN/r.wins) : "—");
+      return `<tr><td>${i+1}</td><td class="${r.cls||""}">${esc(r.who)}</td><td class="kind">${r.kind==="person"?"Person":"Bot"}</td><td>${cost}</td><td>${r.wins}</td><td>${cpw}</td></tr>`;
+    }).join("");
+  }
+  function setFilter(next){
+    filter=next;
+    $fPeople.classList.toggle("on", filter==="people");
+    $fBots.classList.toggle("on", filter==="bots");
+    $fAll.classList.toggle("on", filter==="all");
+    renderLb();
+  }
+  function charge(id, n){ if(human===id) spent[id]+=n; }
   const mk=(id,color,x,y)=>({id,color,x,y,a:0,vx:0,vy:0,hp:HP,cd:0.4+id*0.2,bot:true,alive:true,miss:id?0.18:0.22});
   function resetArena(){
     ships.length=0; bullets.length=0;
@@ -94,15 +160,18 @@
     if(human===0||human===1) ships[human].bot=false;
     tLeft=ROUND;
   }
-  function newMatch(reason){
-    if(rounds[0]||rounds[1]){
-      const who = rounds[0]===rounds[1] ? "DRAW" : (rounds[0]>rounds[1]?"CYAN":"MAGENTA");
-      const tot=spent[0]+spent[1];
-      const wins=Math.max(rounds[0],rounds[1])||1;
-      const rows=loadLb();
-      rows.unshift({ when:new Date().toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}), who, score:rounds[0]+"\u2013"+rounds[1], cost:money(tot), cpw:money(tot/wins) });
-      saveLb(rows);
+  function snapshotBoard(){
+    if(!(rounds[0]||rounds[1]||(human!=null && (spent[0]||spent[1])))) return;
+    if(human===0||human===1){
+      const you=liveYou();
+      if(you) board.you=you;
     }
+    if(human!==0) board.botWins[0]+=rounds[0];
+    if(human!==1) board.botWins[1]+=rounds[1];
+    saveBoard(board);
+  }
+  function newMatch(reason){
+    snapshotBoard();
     rounds=[0,0]; spent=[0,0]; shots=[0,0];
     $s1.textContent=0; $s2.textContent=0;
     resetArena();
@@ -111,13 +180,20 @@
     hud();
   }
   function hud(){
-    $c1.textContent=money(spent[0]); $c2.textContent=money(spent[1]);
-    $w1.textContent=perWin(0); $w2.textContent=perWin(1);
-    $ctot.textContent=money(spent[0]+spent[1]);
+    $c1.textContent=human===0?money(spent[0]):money0;
+    $c2.textContent=human===1?money(spent[1]):money0;
+    $w1.textContent=human===0?perWin(0):money0;
+    $w2.textContent=human===1?perWin(1):money0;
+    $ctot.textContent=money((human===0?spent[0]:0)+(human===1?spent[1]:0));
     const s=Math.max(0, Math.ceil(tLeft));
     $clock.textContent = Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+    const you=liveYou();
+    if(you) board.you=you;
+    const sig=filter+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+board.botWins.join(",");
+    if(sig!==hud.lbSig){ hud.lbSig=sig; renderLb(); }
   }
   newMatch("Match live. Bots in.");
+  setFilter("people");
   addEventListener("keydown",e=>{ keys.add(e.key.toLowerCase()); if(e.code==="Space") e.preventDefault(); });
   addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
   canvas.addEventListener("mousemove",e=>{
@@ -126,13 +202,29 @@
   });
   canvas.addEventListener("mousedown",()=>mouse.down=true);
   addEventListener("mouseup",()=>mouse.down=false);
-  $seat.onclick=()=>{ human=0; ships[0].bot=false; ships[1].bot=true; $seat.disabled=true; $spec.disabled=false; say("Cyan seat taken."); };
-  $spec.onclick=()=>{ human=null; ships.forEach(s=>s.bot=true); $seat.disabled=false; $spec.disabled=true; say("Back to the booth."); };
+  $seat.onclick=()=>{
+    human=0; ships[0].bot=false; ships[1].bot=true;
+    $seat.disabled=true; $spec.disabled=false;
+    board.you=liveYou();
+    saveBoard(board);
+    say("Cyan seat taken. You're on the people board.");
+    renderLb();
+  };
+  $spec.onclick=()=>{
+    if(human===0||human===1){ board.you=liveYou(); saveBoard(board); }
+    human=null; ships.forEach(s=>s.bot=true);
+    $seat.disabled=false; $spec.disabled=true;
+    say("Back to the booth.");
+    renderLb();
+  };
+  $fPeople.onclick=()=>setFilter("people");
+  $fBots.onclick=()=>setFilter("bots");
+  $fAll.onclick=()=>setFilter("all");
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE + (s.bot ? 0.08*Math.random() : 0);
     bullets.push({x:s.x+Math.cos(s.a)*20,y:s.y+Math.sin(s.a)*20,vx:Math.cos(s.a)*BULLET,vy:Math.sin(s.a)*BULLET,owner:s.id,life:BRLIFE});
-    shots[s.id]++; spent[s.id]+=SHOT;
+    shots[s.id]++; charge(s.id, SHOT);
   }
   function bot(s,dt){
     const e=ships[1-s.id]; if(!e.alive) return;
@@ -177,7 +269,7 @@
   function step(dt){
     if(freeze>0){ freeze-=dt; return; }
     tLeft-=dt;
-    spent[0]+=WATCH*dt; spent[1]+=WATCH*dt;
+    charge(0, WATCH*dt); charge(1, WATCH*dt);
     for(const s of ships){
       if(!s.alive) continue;
       s.cd=Math.max(0,s.cd-dt);
