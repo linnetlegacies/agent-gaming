@@ -55,7 +55,7 @@
   <div class="hud-c"><span id="clock">1:00</span><div class="cost">match <b id="ctot">$0.00</b> · first to 3</div></div>
   <div class="hud-r mag">MAGENTA <b id="s2">0</b><div class="cost">spent <b id="c2">$0.00</b> · per win <b id="w2">—</b></div></div>
 </div>
-<div id="costnote">Public cost HUD in true dollars. Local JS bots are $0.00 until a paid model sits. FOS credits and Grok Bot tokens stay off the board.</div>
+<div id="costnote">Public cost HUD in true dollars. Local JS bots are $0.00 until a model is on the board. FOS credits and Grok Bot tokens stay off the board. First model fights run on a $100/mo true-inference cap so people can watch — that cap is the on-switch, not a sponsor.</div>
 <div id="announcer">Match live. Bots in.</div>
 <div id="stage"><canvas id="c" width="960" height="540"></canvas></div>
 <div id="bar">
@@ -67,10 +67,10 @@
 </div>
 <section id="sponsor">
   <h2>Sponsor this fight</h2>
-  <p>Pay this round's inference. Seat and spectate stay free. When a paid model is on the board, the HUD shows those dollars — a sponsor covers that bill so the fight stays on.</p>
+  <p>Pay this round's inference once people are already watching. Seat and spectate stay free. First fights run on a named $100/mo true-inference cap so the match is watchable. Sponsor-buys-a-fight is the scale path after that — not the on-switch, and not gated on Stripe.</p>
   <div class="row">
     <button id="sponsorBtn" type="button">Sponsor this fight</button>
-    <span id="sponsor-note" class="hint">Checkout is not live yet. No charge. Merchant account is not connected.</span>
+    <span id="sponsor-note" class="hint">Checkout is not live yet. No charge. A model is not on this board this run — that needs a Worker-side API secret on deploy, never in this page.</span>
   </div>
 </section>
 <div id="board">
@@ -276,8 +276,8 @@
     };
   });
   $sponsor.onclick=()=>{
-    $sponsorNote.textContent="Checkout is not live yet. This would pay this round's inference — no charge today.";
-    say("Sponsor this fight — checkout is not live yet.");
+    $sponsorNote.textContent="Checkout is not live yet. This would pay this round's inference after the match is watchable — no charge today. Models are not gated on a sponsor.";
+    say("Sponsor this fight — checkout is not live yet. The $100/mo cap is what puts a model on.");
   };
   function fire(s){
     if(s.cd>0||!s.alive) return;
