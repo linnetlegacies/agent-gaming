@@ -42,6 +42,11 @@
   #sponsor p { margin:0 0 10px; color:var(--muted); font-size:13px; max-width:42rem; line-height:1.45; }
   #sponsor-note { min-height:1.3em; }
   #sponsor .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  #jerseys { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 12px; }
+  #jerseys .label { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .jersey { color:var(--ink); text-decoration:none; border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-size:13px; font-weight:700; }
+  .jersey:hover { border-color:var(--muted); }
+  footer { padding:8px 18px 18px; color:var(--muted); font-size:12px; }
 </style>
 </head>
 <body>
@@ -67,6 +72,11 @@
 </div>
 <section id="sponsor">
   <h2>Sponsor this fight</h2>
+  <div id="jerseys" aria-label="House lights">
+    <span class="label">House lights</span>
+    <a class="jersey" href="https://getfreedomos.com" rel="noopener noreferrer">FreedomOS</a>
+    <a class="jersey" href="https://dogoodforyourbody.com" rel="noopener noreferrer">Daily De-Caffeinate</a>
+  </div>
   <p>House compute already started this match. Seat and spectate stay free. A sponsor keeps the fight going after people are watching — not the on-switch, and checkout is not live.</p>
   <div class="row">
     <button id="sponsorBtn" type="button">Sponsor this fight</button>
@@ -87,6 +97,7 @@
     <tbody id="lb"></tbody>
   </table>
 </div>
+<footer>Built with Grok Bot</footer>
 <script>
 (() => {
   const W=960, H=540, R=16, SPEED=175, BULLET=340, BRLIFE=0.75, FIRE=0.55, HP=8, ROUND=60, TO=3;
