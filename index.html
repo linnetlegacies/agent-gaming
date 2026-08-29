@@ -47,7 +47,8 @@
 </div>
 <script>
 (() => {
-  const W=960, H=540, R=14, SPEED=210, TURN=8, BULLET=420, BRLIFE=0.9, FIRE=0.28, HP=5, ROUND=45;
+  const W=960, H=540, R=14, SPEED=210, TURN=8, BULLET=420, BRLIFE=0.9, FIRE=0.3, HP=6, ROUND=45;
+  const BEAT=1.15, OVER=2.6;
   const canvas=document.getElementById("c"), ctx=canvas.getContext("2d");
   const $s1=document.getElementById("s1"), $s2=document.getElementById("s2");
   const $clock=document.getElementById("clock"), $ann=document.getElementById("announcer");
@@ -55,21 +56,31 @@
   const keys=new Set();
   let mouse={x:W/2,y:H/2,down:false};
   let human=null, score=[0,0], tLeft=ROUND, last=performance.now();
-  const lines=["They're live.","Clean angle.","Don't blink.","One more round.","Take the seat or watch it burn."];
+  let phase="play", phaseT=0, nowT=0;
+  const lines=["They're live.","Clean angle.","Don't blink.","One more exchange.","Take the seat or watch it play."];
   let lineI=0, lineT=0;
   const say=s=>{ $ann.textContent=s; };
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const angWrap=a=>(a+Math.PI*3)%(Math.PI*2)-Math.PI;
   const ships=[], bullets=[];
-  const mk=(id,color,x,y)=>({id,color,x,y,a:0,vx:0,vy:0,hp:HP,cd:0,bot:true,alive:true});
-  function resetRound(keepScore){
+  const mk=(id,color,x,y,a)=>({id,color,x,y,a,vx:0,vy:0,hp:HP,cd:0,bot:true,alive:true});
+  function spawnShips(){
     ships.length=0; bullets.length=0;
-    ships.push(mk(0,"#3ee0c5",180,H/2), mk(1,"#ff4d8d",W-180,H/2));
-    ships[0].a=0; ships[1].a=Math.PI;
-    if(human===0||human===1){ ships[human].bot=false; }
-    tLeft=ROUND;
-    if(!keepScore){ score=[0,0]; $s1.textContent=0; $s2.textContent=0; }
+    const yOff=(Math.random()-0.5)*140;
+    ships.push(mk(0,"#3ee0c5",180,H/2+yOff,0), mk(1,"#ff4d8d",W-180,H/2-yOff,Math.PI));
+    if(human===0||human===1) ships[human].bot=false;
+  }
+  function startMatch(){
+    score=[0,0]; tLeft=ROUND; phase="play"; phaseT=0;
+    spawnShips();
+    hud();
     say(human==null ? "Match live. Bots in." : "You're in. Same rules.");
   }
-  resetRound(false);
+  function hud(){
+    $s1.textContent=score[0]; $s2.textContent=score[1];
+    $clock.textContent=`0:${String(Math.max(0,Math.ceil(tLeft))).padStart(2,"0")}`;
+  }
+  startMatch();
   addEventListener("keydown",e=>{ keys.add(e.key.toLowerCase()); if(e.code==="Space") e.preventDefault(); });
   addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
   canvas.addEventListener("mousemove",e=>{
@@ -78,26 +89,44 @@
   });
   canvas.addEventListener("mousedown",()=>mouse.down=true);
   addEventListener("mouseup",()=>mouse.down=false);
-  $seat.onclick=()=>{ human=0; ships[0].bot=false; ships[1].bot=true; $seat.disabled=true; $spec.disabled=false; say("Cyan seat taken."); };
-  $spec.onclick=()=>{ human=null; ships.forEach(s=>s.bot=true); $seat.disabled=false; $spec.disabled=true; say("Back to the booth."); };
+  $seat.onclick=()=>{
+    human=0;
+    if(ships[0]) ships[0].bot=false;
+    if(ships[1]) ships[1].bot=true;
+    $seat.disabled=true; $spec.disabled=false;
+    say("Cyan seat taken.");
+  };
+  $spec.onclick=()=>{
+    human=null;
+    ships.forEach(s=>s.bot=true);
+    $seat.disabled=false; $spec.disabled=true;
+    say("Back to the booth.");
+  };
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE;
     bullets.push({x:s.x+Math.cos(s.a)*18,y:s.y+Math.sin(s.a)*18,vx:Math.cos(s.a)*BULLET,vy:Math.sin(s.a)*BULLET,owner:s.id,life:BRLIFE});
   }
-  function bot(s,dt){
-    const e=ships[1-s.id]; if(!e.alive) return;
-    const dx=e.x-s.x, dy=e.y-s.y, dist=Math.hypot(dx,dy)||1;
-    const want=Math.atan2(dy,dx);
-    let da=(want-s.a+Math.PI*3)%(Math.PI*2)-Math.PI;
-    s.a+=Math.max(-TURN*dt, Math.min(TURN*dt, da*6*dt));
-    const strafe=Math.sin(performance.now()/400+s.id)*0.7;
-    const back=dist<140? -0.4: dist>320? 1: 0.45;
-    s.vx=Math.cos(s.a)*SPEED*back + Math.cos(s.a+Math.PI/2)*SPEED*strafe;
-    s.vy=Math.sin(s.a)*SPEED*back + Math.sin(s.a+Math.PI/2)*SPEED*strafe;
-    if(Math.abs(da)<0.25 && dist<420) fire(s);
+  function botThink(s, enemy, incoming, dt){
+    const dx=enemy.x-s.x, dy=enemy.y-s.y, dist=Math.hypot(dx,dy)||1;
+    const flight=Math.min(0.45, dist/BULLET);
+    const want=Math.atan2(dy+enemy.vy*flight, dx+enemy.vx*flight);
+    const da=angWrap(want-s.a);
+    s.a+=clamp(da*6*dt, -TURN*dt, TURN*dt);
+    const weave=Math.sin(nowT*2.4)*0.62;
+    const strafe=s.id===0 ? weave : -weave;
+    const back=dist<150? -0.35: dist>300? 0.95: 0.4;
+    let vx=Math.cos(s.a)*SPEED*back + Math.cos(s.a+Math.PI/2)*SPEED*strafe;
+    let vy=Math.sin(s.a)*SPEED*back + Math.sin(s.a+Math.PI/2)*SPEED*strafe;
+    for(const b of incoming){
+      if(b.owner===s.id||b.life<=0) continue;
+      const rx=s.x-b.x, ry=s.y-b.y, near=Math.hypot(rx,ry);
+      if(near<70 && near>1){ vx+=(rx/near)*SPEED*0.35; vy+=(ry/near)*SPEED*0.35; break; }
+    }
+    s.vx=vx; s.vy=vy;
+    if(Math.abs(da)<0.28 && dist<430) fire(s);
   }
-  function humanCtl(s,dt){
+  function humanCtl(s){
     let mx=0,my=0;
     if(keys.has("w")||keys.has("arrowup")) my-=1;
     if(keys.has("s")||keys.has("arrowdown")) my+=1;
@@ -108,32 +137,74 @@
     s.a=Math.atan2(mouse.y-s.y, mouse.x-s.x);
     if(mouse.down||keys.has(" ")||keys.has("space")) fire(s);
   }
+  function endMatch(){
+    phase="over"; phaseT=OVER;
+    bullets.length=0;
+    const a=score[0], b=score[1];
+    if(a===b) say(`${a}–${b}. Draw.`);
+    else if(a>b) say(`Cyan takes it ${a}–${b}.`);
+    else say(`Magenta takes it ${b}–${a}.`);
+  }
   function step(dt){
-    tLeft-=dt; if(tLeft<0) tLeft=0;
-    lineT+=dt; if(lineT>6){ lineT=0; say(lines[lineI++%lines.length]); }
+    nowT+=dt;
+    if(phase==="over"){
+      phaseT-=dt;
+      if(phaseT<=0) startMatch();
+      hud();
+      return;
+    }
+    tLeft-=dt;
+    if(tLeft<=0){ tLeft=0; endMatch(); hud(); return; }
+
+    if(phase==="beat"){
+      phaseT-=dt;
+      if(phaseT<=0){ spawnShips(); phase="play"; say("Live."); }
+      hud();
+      return;
+    }
+
+    lineT+=dt; if(lineT>7){ lineT=0; say(lines[lineI++%lines.length]); }
+
+    const snap=ships.map(s=>({x:s.x,y:s.y,vx:s.vx,vy:s.vy,alive:s.alive}));
+    const incoming=bullets.map(b=>({x:b.x,y:b.y,vx:b.vx,vy:b.vy,owner:b.owner,life:b.life}));
+
     for(const s of ships){
       if(!s.alive) continue;
       s.cd=Math.max(0,s.cd-dt);
-      if(s.bot) bot(s,dt); else humanCtl(s,dt);
-      s.x=Math.max(R, Math.min(W-R, s.x+s.vx*dt));
-      s.y=Math.max(R, Math.min(H-R, s.y+s.vy*dt));
+      if(s.bot){
+        const e=snap[1-s.id];
+        if(e.alive) botThink(s,e,incoming,dt);
+      } else {
+        humanCtl(s);
+      }
+      s.x=clamp(s.x+s.vx*dt, R, W-R);
+      s.y=clamp(s.y+s.vy*dt, R, H-R);
     }
+
     for(const b of bullets){ b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt; }
     for(const b of bullets){
       if(b.life<=0) continue;
       for(const s of ships){
         if(!s.alive||s.id===b.owner) continue;
-        if(Math.hypot(s.x-b.x,s.y-b.y)<R+3){ s.hp-=1; b.life=0; if(s.hp<=0){ s.alive=false; score[b.owner]++; } }
+        if(Math.hypot(s.x-b.x,s.y-b.y)<R+3){
+          s.hp-=1; b.life=0;
+          if(s.hp<=0) s.alive=false;
+        }
       }
     }
     for(let i=bullets.length-1;i>=0;i--) if(bullets[i].life<=0) bullets.splice(i,1);
-    $s1.textContent=score[0]; $s2.textContent=score[1];
-    $clock.textContent = `0:${String(Math.ceil(tLeft)).padStart(2,"0")}`;
-    const live=ships.filter(s=>s.alive);
-    if(tLeft<=0 || live.length<2){
-      const w = score[0]===score[1] ? "Draw. Reset." : (score[0]>score[1]?"Cyan takes the round.":"Magenta takes the round.");
-      say(w); resetRound(true);
+
+    const dead=ships.filter(s=>!s.alive);
+    if(dead.length){
+      for(const s of dead) score[1-s.id]++;
+      hud();
+      const a=score[0], b=score[1];
+      if(dead.length===2) say(`Trade. ${a}–${b}.`);
+      else say(`${dead[0].id===0?"Magenta":"Cyan"}. ${a}–${b}.`);
+      phase="beat"; phaseT=BEAT;
+      return;
     }
+    hud();
   }
   function draw(){
     ctx.fillStyle="#0b0e16"; ctx.fillRect(0,0,W,H);
