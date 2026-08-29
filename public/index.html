@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>
+  <meta name="theme-color" content="#07080c"/>
+  <meta name="description" content="Agent Gaming. Watch the match. Take a seat. Arena One is a public watchable bot fight."/>
+  <title>Arena One — Agent Gaming</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%2307080c' width='32' height='32'/%3E%3Cpath fill='%233ee0c5' d='M8 16 L16 8 L18 14 L24 16 L18 18 L16 24 Z'/%3E%3C/svg%3E"/>
+  <style>
+    :root {
+      --bg: #07080c;
+      --ink: #f4f1ea;
+      --muted: #9aa3b2;
+      --cyan: #3ee0c5;
+      --mag: #ff4d8d;
+      --line: #1c2230;
+      --pad: max(12px, env(safe-area-inset-left));
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+    }
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+    header {
+      padding: 12px var(--pad) 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .brand { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: 11px; color: var(--muted); }
+    h1 { margin: 2px 0 0; font-size: 18px; font-weight: 700; }
+    .tag { color: var(--muted); font-size: 13px; text-align: right; }
+    #hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 var(--pad) 4px;
+      font-variant-numeric: tabular-nums;
+      font-size: 15px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .cyan { color: var(--cyan); }
+    .mag { color: var(--mag); }
+    #clock { color: var(--ink); letter-spacing: .06em; }
+    #announcer {
+      min-height: 1.35em;
+      padding: 0 var(--pad) 8px;
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: .02em;
+      flex-shrink: 0;
+    }
+    #stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px 8px;
+      min-height: 0;
+      position: relative;
+    }
+    canvas {
+      width: min(960px, 100%);
+      height: auto;
+      max-height: 100%;
+      background: #0b0e16;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      image-rendering: pixelated;
+      cursor: crosshair;
+      display: block;
+    }
+    #bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 0 var(--pad) 10px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    button {
+      background: var(--ink);
+      color: var(--bg);
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 16px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    button:disabled { opacity: .35; cursor: default; }
+    .hint { color: var(--muted); font-size: 12px; }
+    #pads {
+      display: none;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    #pads.on { display: block; }
+    .stick {
+      position: absolute;
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      border: 1px solid #2a3348;
+      background: rgba(12, 16, 26, .45);
+      pointer-events: auto;
+      touch-action: none;
+    }
+    .stick.left { left: 16px; bottom: 16px; }
+    .stick.right { right: 16px; bottom: 16px; }
+    .knob {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(244, 241, 234, .85);
+      top: 34px;
+      left: 34px;
+      pointer-events: none;
+    }
+    .stick.right .knob { background: rgba(62, 224, 197, .9); }
+    .stick label {
+      position: absolute;
+      inset: auto 0 -18px;
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    @media (max-width: 640px) {
+      header { padding-top: max(10px, env(safe-area-inset-top)); }
+      h1 { font-size: 16px; }
+      .tag { font-size: 12px; max-width: 46vw; }
+      #bar { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+      .hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="brand">Agent Gaming</div>
+      <h1>Arena One</h1>
+    </div>
+    <div class="tag">Watch the match. Take a seat.</div>
+  </header>
+  <div id="hud">
+    <span class="cyan">CYAN <b id="s1">0</b></span>
+    <span id="clock">0:45</span>
+    <span class="mag">MAGENTA <b id="s2">0</b></span>
+  </div>
+  <div id="announcer">Match live. Bots in.</div>
+  <div id="stage">
+    <canvas id="c" width="960" height="540"></canvas>
+    <div id="pads">
+      <div class="stick left" id="movePad" aria-label="Move"><div class="knob" id="moveKnob"></div><label>Move</label></div>
+      <div class="stick right" id="aimPad" aria-label="Aim and shoot"><div class="knob" id="aimKnob"></div><label>Aim / fire</label></div>
+    </div>
+  </div>
+  <div id="bar">
+    <button id="seat" type="button">Take a seat</button>
+    <button id="spec" class="ghost" type="button" disabled>Spectate</button>
+    <span class="hint" id="hint">WASD / arrows move · mouse aim · click or space to shoot</span>
+  </div>
+  <script>
+  (() => {
+    const W = 960, H = 540, R = 14, SPEED = 215, TURN = 7.2;
+    const BULLET = 430, BRLIFE = 0.88, FIRE = 0.26, HP = 5, ROUND = 45, BEAT = 1.7;
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+    const $s1 = document.getElementById("s1");
+    const $s2 = document.getElementById("s2");
+    const $clock = document.getElementById("clock");
+    const $ann = document.getElementById("announcer");
+    const $seat = document.getElementById("seat");
+    const $spec = document.getElementById("spec");
+    const $pads = document.getElementById("pads");
+    const $hint = document.getElementById("hint");
+    const keys = new Set();
+    const mouse = { x: W / 2, y: H / 2, down: false };
+    const touch = { mx: 0, my: 0, ax: 0, ay: 0, aim: false, moveId: null, aimId: null };
+    let human = null;
+    let score = [0, 0];
+    let tLeft = ROUND;
+    let last = performance.now();
+    let phase = "play";
+    let beatT = 0;
+    const lines = [
+      "They're live.",
+      "Clean angle.",
+      "Don't blink.",
+      "One more round.",
+      "Take the seat or watch it burn.",
+      "Center is a dare.",
+      "Hold the line."
+    ];
+    let lineI = 0, lineT = 0;
+    const say = (s) => { $ann.textContent = s; };
+    const ships = [];
+    const bullets = [];
+    const sparks = [];
+    const mk = (id, color, x, y) => ({
+      id, color, x, y, a: id ? Math.PI : 0, vx: 0, vy: 0,
+      hp: HP, cd: 0, bot: true, alive: true, flash: 0
+    });
+
+    function resetRound(keepScore) {
+      ships.length = 0;
+      bullets.length = 0;
+      sparks.length = 0;
+      ships.push(mk(0, "#3ee0c5", 180, H / 2), mk(1, "#ff4d8d", W - 180, H / 2));
+      if (human === 0 || human === 1) ships[human].bot = false;
+      tLeft = ROUND;
+      phase = "play";
+      beatT = 0;
+      if (!keepScore) {
+        score = [0, 0];
+        $s1.textContent = "0";
+        $s2.textContent = "0";
+      }
+      say(human == null ? "Match live. Bots in." : "You're in. Same rules.");
+    }
+
+    function spark(x, y, color, n) {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const v = 40 + Math.random() * 180;
+        sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.25 + Math.random() * 0.35, color });
+      }
+    }
+
+    function canvasPoint(e) {
+      const r = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - r.left) * W / r.width,
+        y: (e.clientY - r.top) * H / r.height
+      };
+    }
+
+    function bindStick(el, kind) {
+      const knob = el.querySelector(".knob");
+      const center = () => {
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, rad: r.width / 2 };
+      };
+      const set = (clientX, clientY) => {
+        const c = center();
+        let dx = clientX - c.x, dy = clientY - c.y;
+        const m = Math.hypot(dx, dy) || 1;
+        const cap = Math.min(m, c.rad - 22);
+        dx = (dx / m) * cap;
+        dy = (dy / m) * cap;
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        const nx = dx / (c.rad - 22);
+        const ny = dy / (c.rad - 22);
+        if (kind === "move") { touch.mx = nx; touch.my = ny; }
+        else { touch.ax = nx; touch.ay = ny; touch.aim = true; }
+      };
+      const clear = () => {
+        knob.style.transform = "";
+        if (kind === "move") { touch.mx = 0; touch.my = 0; touch.moveId = null; }
+        else { touch.ax = 0; touch.ay = 0; touch.aim = false; touch.aimId = null; }
+      };
+      el.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+        if (kind === "move") touch.moveId = e.pointerId;
+        else touch.aimId = e.pointerId;
+        set(e.clientX, e.clientY);
+      });
+      el.addEventListener("pointermove", (e) => {
+        if ((kind === "move" && e.pointerId === touch.moveId) || (kind === "aim" && e.pointerId === touch.aimId)) {
+          set(e.clientX, e.clientY);
+        }
+      });
+      el.addEventListener("pointerup", clear);
+      el.addEventListener("pointercancel", clear);
+    }
+
+    bindStick(document.getElementById("movePad"), "move");
+    bindStick(document.getElementById("aimPad"), "aim");
+
+    function setSeatUI() {
+      const seated = human != null;
+      $seat.disabled = seated;
+      $spec.disabled = !seated;
+      $pads.classList.toggle("on", seated);
+      $hint.textContent = seated
+        ? "WASD / arrows move · mouse or right stick aim · click, space, or hold fire"
+        : "Match is live. Take a seat to play Cyan.";
+    }
+
+    resetRound(false);
+    setSeatUI();
+
+    addEventListener("keydown", (e) => {
+      keys.add(e.key.toLowerCase());
+      if (e.code === "Space") e.preventDefault();
+    });
+    addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+    canvas.addEventListener("mousemove", (e) => {
+      const p = canvasPoint(e);
+      mouse.x = p.x;
+      mouse.y = p.y;
+    });
+    canvas.addEventListener("mousedown", () => { mouse.down = true; });
+    addEventListener("mouseup", () => { mouse.down = false; });
+    canvas.addEventListener("touchstart", (e) => {
+      if (human == null) return;
+      const t = e.changedTouches[0];
+      const p = canvasPoint(t);
+      mouse.x = p.x;
+      mouse.y = p.y;
+    }, { passive: true });
+
+    $seat.onclick = () => {
+      human = 0;
+      if (ships[0]) ships[0].bot = false;
+      if (ships[1]) ships[1].bot = true;
+      setSeatUI();
+      say("Cyan seat taken.");
+    };
+    $spec.onclick = () => {
+      human = null;
+      ships.forEach((s) => { s.bot = true; });
+      touch.mx = touch.my = touch.ax = touch.ay = 0;
+      touch.aim = false;
+      setSeatUI();
+      say("Back to the booth.");
+    };
+
+    function fire(s) {
+      if (s.cd > 0 || !s.alive) return;
+      s.cd = FIRE;
+      bullets.push({
+        x: s.x + Math.cos(s.a) * 18,
+        y: s.y + Math.sin(s.a) * 18,
+        vx: Math.cos(s.a) * BULLET,
+        vy: Math.sin(s.a) * BULLET,
+        owner: s.id,
+        life: BRLIFE
+      });
+    }
+
+    function bot(s, dt) {
+      const e = ships[1 - s.id];
+      if (!e.alive) return;
+      const dx = e.x - s.x, dy = e.y - s.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const want = Math.atan2(dy, dx);
+      let da = (want - s.a + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+      s.a += Math.max(-TURN * dt, Math.min(TURN * dt, da * 6 * dt));
+      const t = performance.now() / 1000;
+      const strafe = Math.sin(t * (1.4 + s.id * 0.35) + s.id * 2.1) * (s.id ? 0.85 : 0.55);
+      const back = dist < 130 ? -0.55 : dist > 340 ? 1 : (s.id ? 0.35 : 0.62);
+      s.vx = Math.cos(s.a) * SPEED * back + Math.cos(s.a + Math.PI / 2) * SPEED * strafe;
+      s.vy = Math.sin(s.a) * SPEED * back + Math.sin(s.a + Math.PI / 2) * SPEED * strafe;
+      if (Math.abs(da) < 0.28 && dist < 440 && (s.id === 0 || Math.sin(t * 9 + s.id) > -0.15)) fire(s);
+    }
+
+    function humanCtl(s) {
+      let mx = touch.mx, my = touch.my;
+      if (keys.has("w") || keys.has("arrowup")) my -= 1;
+      if (keys.has("s") || keys.has("arrowdown")) my += 1;
+      if (keys.has("a") || keys.has("arrowleft")) mx -= 1;
+      if (keys.has("d") || keys.has("arrowright")) mx += 1;
+      const n = Math.hypot(mx, my) || 1;
+      s.vx = (mx / n) * SPEED * (mx || my ? 1 : 0);
+      s.vy = (my / n) * SPEED * (mx || my ? 1 : 0);
+      if (touch.aim && (touch.ax || touch.ay)) s.a = Math.atan2(touch.ay, touch.ax);
+      else s.a = Math.atan2(mouse.y - s.y, mouse.x - s.x);
+      if (mouse.down || touch.aim || keys.has(" ") || keys.has("space")) fire(s);
+    }
+
+    function endRound() {
+      if (phase !== "play") return;
+      phase = "beat";
+      beatT = BEAT;
+      const live = ships.filter((s) => s.alive);
+      if (live.length === 1) {
+        say(live[0].id === 0 ? "Cyan takes the round." : "Magenta takes the round.");
+      } else if (score[0] === score[1]) {
+        say("Draw. Reset.");
+      } else {
+        say(score[0] > score[1] ? "Cyan holds the board." : "Magenta holds the board.");
+      }
+    }
+
+    function step(dt) {
+      lineT += dt;
+      if (phase === "play" && lineT > 6) {
+        lineT = 0;
+        say(lines[lineI++ % lines.length]);
+      }
+      if (phase === "beat") {
+        beatT -= dt;
+        for (const sp of sparks) {
+          sp.x += sp.vx * dt;
+          sp.y += sp.vy * dt;
+          sp.life -= dt;
+        }
+        for (let i = sparks.length - 1; i >= 0; i--) if (sparks[i].life <= 0) sparks.splice(i, 1);
+        if (beatT <= 0) resetRound(true);
+        $clock.textContent = "0:00";
+        return;
+      }
+
+      tLeft -= dt;
+      if (tLeft < 0) tLeft = 0;
+      for (const s of ships) {
+        if (!s.alive) continue;
+        s.cd = Math.max(0, s.cd - dt);
+        s.flash = Math.max(0, s.flash - dt);
+        if (s.bot) bot(s, dt);
+        else humanCtl(s);
+        s.x = Math.max(R, Math.min(W - R, s.x + s.vx * dt));
+        s.y = Math.max(R, Math.min(H - R, s.y + s.vy * dt));
+      }
+      for (const b of bullets) {
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        b.life -= dt;
+      }
+      for (const b of bullets) {
+        if (b.life <= 0) continue;
+        for (const s of ships) {
+          if (!s.alive || s.id === b.owner) continue;
+          if (Math.hypot(s.x - b.x, s.y - b.y) < R + 3) {
+            s.hp -= 1;
+            s.flash = 0.08;
+            b.life = 0;
+            spark(b.x, b.y, s.color, 6);
+            if (s.hp <= 0) {
+              s.alive = false;
+              score[b.owner] += 1;
+              spark(s.x, s.y, s.color, 22);
+            }
+          }
+        }
+      }
+      for (let i = bullets.length - 1; i >= 0; i--) if (bullets[i].life <= 0) bullets.splice(i, 1);
+      for (const sp of sparks) {
+        sp.x += sp.vx * dt;
+        sp.y += sp.vy * dt;
+        sp.life -= dt;
+      }
+      for (let i = sparks.length - 1; i >= 0; i--) if (sparks[i].life <= 0) sparks.splice(i, 1);
+      $s1.textContent = String(score[0]);
+      $s2.textContent = String(score[1]);
+      $clock.textContent = `0:${String(Math.ceil(tLeft)).padStart(2, "0")}`;
+      const live = ships.filter((s) => s.alive);
+      if (tLeft <= 0 || live.length < 2) endRound();
+    }
+
+    function draw() {
+      ctx.fillStyle = "#0b0e16";
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = "#151b28";
+      ctx.lineWidth = 1;
+      for (let x = 40; x < W; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      for (let y = 40; y < H; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      ctx.strokeStyle = "#1e2638";
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, 70, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "#182033";
+      ctx.strokeRect(24, 24, W - 48, H - 48);
+      for (const sp of sparks) {
+        ctx.globalAlpha = Math.max(0, sp.life * 3);
+        ctx.fillStyle = sp.color;
+        ctx.fillRect(sp.x, sp.y, 2, 2);
+        ctx.globalAlpha = 1;
+      }
+      for (const b of bullets) {
+        ctx.fillStyle = b.owner ? "#ff4d8d" : "#3ee0c5";
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      for (const s of ships) {
+        if (!s.alive) continue;
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.a);
+        ctx.fillStyle = s.flash > 0 ? "#fff" : s.color;
+        ctx.beginPath();
+        ctx.moveTo(18, 0);
+        ctx.lineTo(-12, 11);
+        ctx.lineTo(-6, 0);
+        ctx.lineTo(-12, -11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "#1c2230";
+        ctx.fillRect(s.x - 16, s.y - 26, 32, 4);
+        ctx.fillStyle = s.color;
+        ctx.fillRect(s.x - 16, s.y - 26, 32 * (s.hp / HP), 4);
+        if (!s.bot) {
+          ctx.fillStyle = "#f4f1ea";
+          ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("YOU", s.x, s.y - 32);
+        }
+      }
+      if (phase === "beat") {
+        ctx.fillStyle = "rgba(7, 8, 12, 0.28)";
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    function loop(now) {
+      const dt = Math.min(0.033, (now - last) / 1000);
+      last = now;
+      step(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>
