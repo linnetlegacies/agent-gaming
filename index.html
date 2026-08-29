@@ -53,12 +53,12 @@
   <div class="tag">Watch the match. Take a seat. House compute is already on.</div>
 </header>
 <div id="hud">
-  <div class="hud-l cyan">GROK BOT <b id="s1">0</b><div class="cost">spent <b id="c1">$0.000</b> · per win <b id="w1">—</b></div></div>
-  <div class="hud-c"><span id="clock">1:00</span><div class="cost">match <b id="ctot">$0.000</b> · first to 3</div></div>
-  <div class="hud-r mag">GROK BUILD <b id="s2">0</b><div class="cost">spent <b id="c2">$0.000</b> · per win <b id="w2">—</b></div></div>
+  <div class="hud-l cyan">GROK BOT <b id="s1">0</b><div class="cost">spent <b id="c1">$0.00</b> · per win <b id="w1">$0.00</b></div></div>
+  <div class="hud-c"><span id="clock">1:00</span><div class="cost">match <b id="ctot">$0.00</b> · first to 3</div></div>
+  <div class="hud-r mag">GROK BUILD <b id="s2">0</b><div class="cost">spent <b id="c2">$0.00</b> · per win <b id="w2">$0.00</b></div></div>
 </div>
-<div id="costnote">True dollars on the HUD. House JS fighters stay $0.00 until a Grok-mix model is on the board. Grok Bot vs Grok Build starts the fight — sponsors keep it going after people can watch.</div>
-<div id="announcer">Match live. Grok Bot vs Grok Build.</div>
+<div id="costnote">GROK BOT is a house Grok policy compiled this hour — not a live per-frame LLM, not sponsor-gated. Spent stays $0.00 until a live token meter exists. GROK BUILD is the JS twin. House compute started this fight. Sponsors keep it going after people can watch.</div>
+<div id="announcer">Match live. House Grok vs Grok Build.</div>
 <div id="stage"><canvas id="c" width="960" height="540"></canvas></div>
 <div id="bar">
   <button id="seat" type="button">Take a seat</button>
@@ -141,7 +141,7 @@
     const you=liveYou();
     if(you && filter!=="bots") rows.push(you);
     if(filter!=="people"){
-      rows.push({ kind:"bot", who:"GROK BOT", spentN:0, wins:board.botWins[0], cls:"cyan" });
+      rows.push({ kind:"model", who:"GROK BOT", spentN:0, wins:board.botWins[0], cls:"cyan" });
       rows.push({ kind:"bot", who:"GROK BUILD", spentN:0, wins:board.botWins[1], cls:"mag" });
     }
     rows.sort((a,b)=> (b.spentN-a.spentN) || (b.wins-a.wins));
@@ -154,9 +154,11 @@
       return;
     }
     $lb.innerHTML = rows.map((r,i)=>{
-      const cost=r.kind==="bot" ? money0 : money(r.spentN);
-      const cpw=r.kind==="bot" ? money0 : (r.wins ? money(r.spentN/r.wins) : "—");
-      return `<tr><td>${i+1}</td><td class="${r.cls||""}">${esc(r.who)}</td><td class="kind">${r.kind==="person"?"Person":"Bot"}</td><td>${cost}</td><td>${r.wins}</td><td>${cpw}</td></tr>`;
+      const house=r.kind!=="person";
+      const cost=house ? money0 : money(r.spentN);
+      const cpw=house ? money0 : (r.wins ? money(r.spentN/r.wins) : "—");
+      const kind=r.kind==="person"?"Person":r.kind==="model"?"Model":"Bot";
+      return `<tr><td>${i+1}</td><td class="${r.cls||""}">${esc(r.who)}</td><td class="kind">${kind}</td><td>${cost}</td><td>${r.wins}</td><td>${cpw}</td></tr>`;
     }).join("");
   }
   function setFilter(next){
@@ -167,7 +169,8 @@
     renderLb();
   }
   function charge(id, n){ if(human===id) spent[id]+=n; }
-  const mk=(id,color,x,y)=>({id,color,x,y,a:0,vx:0,vy:0,hp:HP,cd:0.4+id*0.2,bot:true,alive:true,miss:id?0.18:0.22});
+  const mk=(id,color,x,y)=>({id,color,x,y,a:0,vx:0,vy:0,hp:HP,cd:0.4+id*0.2,bot:true,alive:true,miss:id?0.18:0.22,breakOff:0,breakDir:1});
+  const wrapA=a=>(a+Math.PI*3)%(Math.PI*2)-Math.PI;
   function resetArena(){
     ships.length=0; bullets.length=0;
     ships.push(mk(0,"#3ee0c5",180,H/2), mk(1,"#ff4d8d",W-180,H/2));
@@ -190,7 +193,7 @@
     rounds=[0,0]; spent=[0,0]; shots=[0,0];
     $s1.textContent=0; $s2.textContent=0;
     resetArena();
-    say(reason || (human==null ? "Match live. Grok Bot vs Grok Build." : "You're in. Same rules."));
+    say(reason || (human==null ? "Match live. House Grok vs Grok Build." : "You're in. Same rules."));
     renderLb();
     hud();
   }
@@ -199,7 +202,7 @@
     $c2.textContent=human===1?money(spent[1]):money0;
     $w1.textContent=human===0?perWin(0):money0;
     $w2.textContent=human===1?perWin(1):money0;
-    $ctot.textContent=money((human===0?spent[0]:0)+(human===1?spent[1]:0));
+    $ctot.textContent=human==null?money0:money((human===0?spent[0]:0)+(human===1?spent[1]:0));
     const s=Math.max(0, Math.ceil(tLeft));
     $clock.textContent = Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
     const you=liveYou();
@@ -207,7 +210,7 @@
     const sig=filter+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+board.botWins.join(",");
     if(sig!==hud.lbSig){ hud.lbSig=sig; renderLb(); }
   }
-  newMatch("Match live. Grok Bot vs Grok Build.");
+  newMatch("Match live. House Grok vs Grok Build.");
   setFilter("people");
   addEventListener("keydown",e=>{ keys.add(e.key.toLowerCase()); if(e.code==="Space") e.preventDefault(); });
   addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
@@ -222,7 +225,7 @@
     $seat.disabled=true; $spec.disabled=false;
     board.you=liveYou();
     saveBoard(board);
-    say("Cyan seat taken. You're on the people board. Grok Build stays house compute.");
+    say("Cyan seat taken. You're on the people board. Grok Build stays the JS twin.");
     renderLb();
   };
   $spec.onclick=()=>{
@@ -241,7 +244,7 @@
   };
   function fire(s){
     if(s.cd>0||!s.alive) return;
-    s.cd=FIRE + (s.bot ? 0.08*Math.random() : 0);
+    s.cd=FIRE + (s.id===1 && s.bot ? 0.08*Math.random() : 0);
     bullets.push({x:s.x+Math.cos(s.a)*20,y:s.y+Math.sin(s.a)*20,vx:Math.cos(s.a)*BULLET,vy:Math.sin(s.a)*BULLET,owner:s.id,life:BRLIFE});
     shots[s.id]++; charge(s.id, SHOT);
   }
@@ -257,6 +260,41 @@
     s.vx=Math.cos(s.a)*SPEED*back + Math.cos(s.a+Math.PI/2)*SPEED*0.85*strafe;
     s.vy=Math.sin(s.a)*SPEED*back + Math.sin(s.a+Math.PI/2)*SPEED*0.85*strafe;
     if(Math.abs(da)<0.35 && dist<380 && Math.random()>s.miss) fire(s);
+  }
+  function grokPolicy(s,dt){
+    const e=ships[1-s.id]; if(!e.alive) return;
+    const dx=e.x-s.x, dy=e.y-s.y, dist=Math.hypot(dx,dy)||1;
+    const tHit=dist/BULLET;
+    const lx=e.x+e.vx*tHit, ly=e.y+e.vy*tHit;
+    const want=Math.atan2(ly-s.y, lx-s.x);
+    const da=wrapA(want-s.a);
+    s.a+=Math.max(-3.6*dt, Math.min(3.6*dt, da*5.2*dt));
+    const fwdX=Math.cos(s.a), fwdY=Math.sin(s.a);
+    const prpX=-fwdY, prpY=fwdX;
+    let along=dist<200? -0.9 : dist>280? 0.95 : 0.12;
+    const aimedAt=Math.abs(wrapA(e.a-Math.atan2(s.y-e.y, s.x-e.x)))<0.5;
+    const openL=s.x, openR=W-s.x, openT=s.y, openB=H-s.y;
+    const moreX=openL>=openR?-1:1, moreY=openT>=openB?-1:1;
+    let strafe=0;
+    if(aimedAt) strafe=(prpX*moreX+prpY*moreY)>=0?1:-1;
+    if(s.breakOff>0){ s.breakOff-=dt; along=-0.7; strafe=s.breakDir||1; }
+    if((Math.min(openL,openR)<80 && Math.min(openT,openB)<80) || Math.min(openL,openR,openT,openB)<70){
+      const cx=W/2-s.x, cy=H/2-s.y, n=Math.hypot(cx,cy)||1;
+      s.vx=(cx/n)*SPEED; s.vy=(cy/n)*SPEED;
+    } else {
+      s.vx=fwdX*SPEED*along + prpX*SPEED*0.82*strafe + moreX*SPEED*0.12;
+      s.vy=fwdY*SPEED*along + prpY*SPEED*0.82*strafe + moreY*SPEED*0.08;
+    }
+    const incoming=bullets.some(b=>{
+      if(b.owner===s.id||b.life<=0) return false;
+      const bx=b.x-s.x, by=b.y-s.y;
+      return (bx*fwdX+by*fwdY)>0 && (bx*fwdX+by*fwdY)<160 && Math.abs(bx*prpX+by*prpY)<18;
+    });
+    if(Math.abs(da)<0.11 && dist>=110 && dist<=400 && !incoming && s.breakOff<=0){
+      const n=shots[s.id];
+      fire(s);
+      if(shots[s.id]>n){ s.breakOff=0.32; s.breakDir=strafe||moreX||1; }
+    }
   }
   function humanCtl(s){
     let mx=0,my=0;
@@ -279,7 +317,7 @@
       freeze=1.6;
       const champ=rounds[0]>rounds[1]?"Grok Bot":"Grok Build";
       say(champ+" takes the match. Board updated.");
-      setTimeout(()=>newMatch(human==null?"Next match. Grok Bot vs Grok Build.":"Next match. You're still in."), 1600);
+      setTimeout(()=>newMatch(human==null?"Next match. House Grok vs Grok Build.":"Next match. You're still in."), 1600);
       return;
     }
     freeze=1.15;
@@ -292,7 +330,9 @@
     for(const s of ships){
       if(!s.alive) continue;
       s.cd=Math.max(0,s.cd-dt);
-      if(s.bot) bot(s,dt); else humanCtl(s);
+      if(!s.bot) humanCtl(s);
+      else if(s.id===0) grokPolicy(s,dt);
+      else bot(s,dt);
       s.x=Math.max(R+8, Math.min(W-R-8, s.x+s.vx*dt));
       s.y=Math.max(R+8, Math.min(H-R-8, s.y+s.vy*dt));
     }
