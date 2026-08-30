@@ -7,8 +7,8 @@
 <style>
   :root { --bg:#07080c; --ink:#f4f1ea; --muted:#9aa3b2; --cyan:#3ee0c5; --mag:#ff4d8d; --line:#1c2230; }
   * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, sans-serif; }
-  body { display:flex; flex-direction:column; min-height:100%; }
+  html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, sans-serif; overflow-x:hidden; }
+  body { display:flex; flex-direction:column; min-height:100%; width:100%; }
   header { padding:14px 18px 8px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
   .brand { font-weight:800; letter-spacing:.08em; text-transform:uppercase; font-size:12px; color:var(--muted); }
   h1 { margin:0; font-size:18px; font-weight:700; }
@@ -19,8 +19,8 @@
   .cost { font-size:12px; color:var(--muted); }
   .cost b { color:var(--ink); font-weight:700; }
   #announcer { min-height:1.4em; padding:0 18px 10px; color:var(--muted); font-size:14px; letter-spacing:.02em; }
-  #stage { flex:1; display:flex; align-items:center; justify-content:center; padding:0 12px 12px; }
-  canvas { width:min(960px,100%); height:auto; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
+  #stage { flex:1; display:flex; align-items:center; justify-content:center; padding:0 12px 12px; width:100%; max-width:100%; }
+  canvas { width:100%; max-width:960px; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
   #bar { display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 12px; align-items:center; }
   button { background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; }
   button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
@@ -101,7 +101,7 @@
 <footer>Built with <a href="https://x.ai/bot" rel="noopener noreferrer">Grok Bot</a></footer>
 <script>
 (() => {
-  const W=960, H=540, R=16, SPEED=175, BULLET=340, BRLIFE=0.75, FIRE=0.55, HP=8, ROUND=60, TO=3;
+  const W=960, H=540, R=16, SPEED=175, BULLET=340, BRLIFE=0.75, FIRE=0.55, HP=8, ROUND=60, TO=3, BEAT=1;
   const WATCH=0.00035, SHOT=0.0018;
   const canvas=document.getElementById("c"), ctx=canvas.getContext("2d");
   const $s1=document.getElementById("s1"), $s2=document.getElementById("s2");
@@ -114,7 +114,7 @@
   const keys=new Set();
   let mouse={x:W/2,y:H/2,down:false};
   let human=null, rounds=[0,0], tLeft=ROUND, last=performance.now();
-  let freeze=0, spent=[0,0], shots=[0,0];
+  let freeze=0, ending=false, spent=[0,0], shots=[0,0];
   const money=n=>"$"+n.toFixed(3);
   const money0="$0.00";
   const perWin=(side)=> rounds[side] ? money(spent[side]/rounds[side]) : "—";
@@ -183,11 +183,14 @@
   function charge(id, n){ if(human===id) spent[id]+=n; }
   const mk=(id,color,x,y)=>({id,color,x,y,a:0,vx:0,vy:0,hp:HP,cd:0.4+id*0.2,bot:true,alive:true,miss:id?0.18:0.22,breakOff:0,breakDir:1});
   const wrapA=a=>(a+Math.PI*3)%(Math.PI*2)-Math.PI;
-  function resetArena(){
+  function spawnShips(){
     ships.length=0; bullets.length=0;
     ships.push(mk(0,"#3ee0c5",180,H/2), mk(1,"#ff4d8d",W-180,H/2));
     ships[0].a=0; ships[1].a=Math.PI;
     if(human===0||human===1) ships[human].bot=false;
+  }
+  function resetArena(){
+    spawnShips();
     tLeft=ROUND;
   }
   function snapshotBoard(){
@@ -204,6 +207,7 @@
     snapshotBoard();
     rounds=[0,0]; spent=[0,0]; shots=[0,0];
     $s1.textContent=0; $s2.textContent=0;
+    ending=false; freeze=0;
     resetArena();
     say(reason || (human==null ? "Match live. House Grok vs Grok Build." : "You're in. Same rules."));
     renderLb();
@@ -260,8 +264,8 @@
     bullets.push({x:s.x+Math.cos(s.a)*20,y:s.y+Math.sin(s.a)*20,vx:Math.cos(s.a)*BULLET,vy:Math.sin(s.a)*BULLET,owner:s.id,life:BRLIFE});
     shots[s.id]++; charge(s.id, SHOT);
   }
-  function bot(s,dt){
-    const e=ships[1-s.id]; if(!e.alive) return;
+  function bot(s,e,dt){
+    if(!e||!e.alive) return;
     const dx=e.x-s.x, dy=e.y-s.y, dist=Math.hypot(dx,dy)||1;
     const jitter=(Math.sin(performance.now()/260+s.id*2)+Math.sin(performance.now()/90+s.id))*0.35;
     const want=Math.atan2(dy,dx)+jitter;
@@ -273,8 +277,8 @@
     s.vy=Math.sin(s.a)*SPEED*back + Math.sin(s.a+Math.PI/2)*SPEED*0.85*strafe;
     if(Math.abs(da)<0.35 && dist<380 && Math.random()>s.miss) fire(s);
   }
-  function grokPolicy(s,dt){
-    const e=ships[1-s.id]; if(!e.alive) return;
+  function grokPolicy(s,e,incoming,dt){
+    if(!e||!e.alive) return;
     const dx=e.x-s.x, dy=e.y-s.y, dist=Math.hypot(dx,dy)||1;
     const tHit=dist/BULLET;
     const lx=e.x+e.vx*tHit, ly=e.y+e.vy*tHit;
@@ -297,12 +301,12 @@
       s.vx=fwdX*SPEED*along + prpX*SPEED*0.82*strafe + moreX*SPEED*0.12;
       s.vy=fwdY*SPEED*along + prpY*SPEED*0.82*strafe + moreY*SPEED*0.08;
     }
-    const incoming=bullets.some(b=>{
+    const inbound=(incoming||[]).some(b=>{
       if(b.owner===s.id||b.life<=0) return false;
       const bx=b.x-s.x, by=b.y-s.y;
       return (bx*fwdX+by*fwdY)>0 && (bx*fwdX+by*fwdY)<160 && Math.abs(bx*prpX+by*prpY)<18;
     });
-    if(Math.abs(da)<0.11 && dist>=110 && dist<=400 && !incoming && s.breakOff<=0){
+    if(Math.abs(da)<0.11 && dist>=110 && dist<=400 && !inbound && s.breakOff<=0){
       const n=shots[s.id];
       fire(s);
       if(shots[s.id]>n){ s.breakOff=0.32; s.breakDir=strafe||moreX||1; }
@@ -319,32 +323,57 @@
     s.a=Math.atan2(mouse.y-s.y, mouse.x-s.x);
     if(mouse.down||keys.has(" ")||keys.has("space")) fire(s);
   }
+  function nextMatchLine(){
+    return human==null ? "Next match. House Grok vs Grok Build." : "Next match. You're still in.";
+  }
+  function finishMatch(reason){
+    if(ending) return;
+    ending=true;
+    freeze=1.6;
+    say(reason);
+    setTimeout(()=>newMatch(nextMatchLine()), 1600);
+  }
+  function timeUp(){
+    tLeft=0;
+    if(rounds[0]>rounds[1]) finishMatch("Grok Bot takes the match. Board updated.");
+    else if(rounds[1]>rounds[0]) finishMatch("Grok Build takes the match. Board updated.");
+    else finishMatch("Time. Nobody dropped.");
+  }
   function roundOver(winner){
-    if(freeze>0) return;
-    freeze=0.05;
-    if(winner===0||winner===1){ rounds[winner]++; say(winner===0?"Grok Bot takes the round.":"Grok Build takes the round."); }
-    else say("Time. Nobody dropped.");
+    if(freeze>0 || ending) return;
+    if(winner===0||winner===1){
+      rounds[winner]++;
+      say(winner===0?"Grok Bot takes the round.":"Grok Build takes the round.");
+    }
     $s1.textContent=rounds[0]; $s2.textContent=rounds[1];
     if(rounds[0]>=TO || rounds[1]>=TO){
-      freeze=1.6;
       const champ=rounds[0]>rounds[1]?"Grok Bot":"Grok Build";
-      say(champ+" takes the match. Board updated.");
-      setTimeout(()=>newMatch(human==null?"Next match. House Grok vs Grok Build.":"Next match. You're still in."), 1600);
+      finishMatch(champ+" takes the match. Board updated.");
       return;
     }
-    freeze=1.15;
-    setTimeout(()=>{ resetArena(); freeze=0; say("Round live."); }, 1150);
+    freeze=BEAT;
   }
   function step(dt){
-    if(freeze>0){ freeze-=dt; return; }
+    if(ending){ freeze-=dt; hud(); return; }
+    if(freeze>0){
+      tLeft-=dt;
+      freeze-=dt;
+      if(tLeft<=0){ timeUp(); hud(); return; }
+      if(freeze<=0){ spawnShips(); say("Round live."); }
+      hud();
+      return;
+    }
     tLeft-=dt;
     charge(0, WATCH*dt); charge(1, WATCH*dt);
+    const snap=ships.map(s=>({id:s.id,x:s.x,y:s.y,a:s.a,vx:s.vx,vy:s.vy,alive:s.alive}));
+    const incoming=bullets.map(b=>({x:b.x,y:b.y,vx:b.vx,vy:b.vy,owner:b.owner,life:b.life}));
+    const foe=id=>snap.find(x=>x.id===id);
     for(const s of ships){
       if(!s.alive) continue;
       s.cd=Math.max(0,s.cd-dt);
       if(!s.bot) humanCtl(s);
-      else if(s.id===0) grokPolicy(s,dt);
-      else bot(s,dt);
+      else if(s.id===0) grokPolicy(s, foe(1), incoming, dt);
+      else bot(s, foe(0), dt);
       s.x=Math.max(R+8, Math.min(W-R-8, s.x+s.vx*dt));
       s.y=Math.max(R+8, Math.min(H-R-8, s.y+s.vy*dt));
     }
@@ -360,7 +389,8 @@
       }
     }
     for(let i=bullets.length-1;i>=0;i--) if(bullets[i].life<=0) bullets.splice(i,1);
-    if(tLeft<=0 && freeze<=0) roundOver(-1);
+    if(ending){ hud(); return; }
+    if(tLeft<=0) timeUp();
     hud();
   }
   function draw(){
