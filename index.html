@@ -40,6 +40,18 @@
   #clock { color:var(--ink); font-weight:800; font-size:16px; }
   .cost { font-size:12px; color:var(--muted); }
   .cost b { color:var(--ink); font-weight:700; }
+  #stakes { padding:0 18px 10px; }
+  #stakes .stakes-row { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  #stakes-now { font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  #stakes-now b { color:var(--ink); font-weight:700; }
+  #stakes .last { display:flex; align-items:center; gap:8px; margin-top:6px; min-height:1.6em; }
+  #stakes .kicker { font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--lime); }
+  #stakes-hist { list-style:none; margin:0; padding:0; display:flex; gap:6px; flex-wrap:wrap; }
+  #stakes-hist li { border:1px solid var(--line); border-radius:999px; padding:2px 9px; font-size:12px; color:var(--ink); font-variant-numeric:tabular-nums; }
+  #stakes-hist li.empty { color:var(--muted); border-style:dashed; }
+  button.share { padding:7px 14px; font-size:12px; }
+  #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30; background:var(--lime); color:var(--bg); font-weight:800; font-size:13px; padding:8px 16px; border-radius:999px; pointer-events:none; }
+  #toast[hidden] { display:none; }
   #announcer { min-height:1.4em; padding:0 18px 8px; color:var(--muted); font-size:14px; letter-spacing:.02em; }
   #ticker { margin:0 18px 10px; border:1px solid var(--line); border-left:3px solid var(--lime); background:#0b0e16; border-radius:0 8px 8px 0; padding:7px 12px 6px 10px; }
   #ticker .head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:3px; }
@@ -52,11 +64,14 @@
   .tick-build { color:var(--lime); font-weight:700; }
   #stage { position:relative; flex:1; display:flex; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
   canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
-  .ghost-plate { position:absolute; top:18px; right:18px; z-index:2; min-width:156px; max-width:min(228px,46%); padding:8px 10px 9px; background:rgba(10,10,10,.78); border:1px dashed var(--desk); border-radius:8px; pointer-events:none; }
-  .ghost-plate.is-live { border-style:solid; border-color:var(--lime); pointer-events:auto; }
+  .ghost-plate { position:absolute; top:18px; right:18px; z-index:2; min-width:156px; max-width:min(228px,46%); padding:8px 10px 9px; background:rgba(10,10,10,.78); border:1px dashed var(--desk); border-radius:8px; pointer-events:auto; cursor:pointer; }
+  .ghost-plate.is-live { border-style:solid; border-color:var(--lime); cursor:default; }
   .ghost-kicker { margin:0 0 6px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--lime); }
   .ghost-jersey { display:flex; align-items:center; justify-content:center; min-height:38px; border:1px dashed var(--line); border-radius:6px; color:var(--muted); text-decoration:none; }
   .ghost-dash { color:var(--muted); opacity:.5; font-size:20px; font-weight:800; letter-spacing:.28em; padding-left:.28em; }
+  .ghost-offer { margin:6px 0 0; font-size:11px; font-weight:800; letter-spacing:.04em; color:var(--lime); }
+  .ghost-empty { margin:3px 0 0; font-size:10px; color:var(--muted); }
+  .ghost-plate.is-live .ghost-offer, .ghost-plate.is-live .ghost-empty { display:none; }
   .ghost-plate.is-live .ghost-jersey { border-style:solid; border-color:var(--desk); gap:8px; padding:6px 8px; color:var(--ink); }
   .ghost-name { font-size:13px; font-weight:800; letter-spacing:.04em; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:11em; }
   .ghost-plate img { width:28px; height:28px; object-fit:contain; background:#000; border-radius:4px; flex-shrink:0; }
@@ -119,6 +134,21 @@
   <div class="hud-c"><div class="live-row"><button type="button" id="watch" class="live" aria-label="Watch the live match">LIVE</button><span id="clock">1:00</span></div><div class="cost">match <b id="ctot">$0.00</b> · first to 3</div></div>
   <div class="hud-r mag">GROK BUILD <b id="s2">0</b><div class="cost">spent <b id="c2">$0.00</b> · per win <b id="w2">$0.00</b></div></div>
 </div>
+<div id="stakes" aria-label="Round stakes">
+  <div class="stakes-row">
+    <div id="stakes-now">This round · first to 3 · <b>0–0</b> · leaders house <b>$0.00</b></div>
+    <button type="button" id="share" class="ghost share">Share this fight</button>
+  </div>
+  <div class="last">
+    <span class="kicker">Last</span>
+    <ol id="stakes-hist" aria-label="Finished rounds">
+      <li class="empty">No rounds in.</li>
+      <li class="empty" aria-hidden="true">—</li>
+      <li class="empty" aria-hidden="true">—</li>
+    </ol>
+  </div>
+</div>
+<div id="toast" hidden role="status" aria-live="polite">Link copied. Send it.</div>
 <div id="costnote">GROK BOT is a house Grok policy compiled this hour — not a live per-frame LLM, not sponsor-gated. Spent stays $0.00 until a live token meter exists. GROK BUILD is the JS twin. House compute started this fight. Sponsors keep it going after people can watch.</div>
 <div id="announcer">Match live. House Grok vs Grok Build.</div>
 <div id="ticker" role="log" aria-live="polite" aria-label="Fight ticker">
@@ -126,9 +156,11 @@
   <ol id="ticks"></ol>
 </div>
 <div id="stage">
-  <aside id="fight-sponsor" class="ghost-plate" data-empty="true" aria-label="This fight sponsored by">
+  <aside id="fight-sponsor" class="ghost-plate" data-empty="true" role="button" tabindex="0" aria-label="Sponsor this fight, $20">
     <p class="ghost-kicker">This fight sponsored by</p>
     <div id="ghost-jersey" class="ghost-jersey"><span class="ghost-dash" aria-hidden="true">___</span></div>
+    <p class="ghost-offer">$20 · this fight</p>
+    <p class="ghost-empty">No bid yet — be the first</p>
   </aside>
   <canvas id="c" width="960" height="540" tabindex="0"></canvas>
 </div>
@@ -153,8 +185,9 @@
       </svg>
       <input id="sponsorProduct" type="text" placeholder="Your product URL or @handle" aria-label="Your product URL or @handle" autocomplete="url" inputmode="url" maxlength="240" required/>
     </label>
-    <button id="sponsorBtn" type="button" disabled>Sponsor this fight · $20</button>
+    <button id="sponsorBtn" type="button">Sponsor this fight · $20</button>
   </div>
+  <p id="sponsor-unlock" class="hint">Type your URL or @handle to unlock.</p>
 </section>
 <div id="board">
   <div class="head">
@@ -184,6 +217,10 @@
   const $ctot=document.getElementById("ctot"), $lb=document.getElementById("lb");
   const $seat=document.getElementById("seat"), $spec=document.getElementById("spec"), $watch=document.getElementById("watch");
   const $fPeople=document.getElementById("f-people"), $fBots=document.getElementById("f-bots"), $fAll=document.getElementById("f-all");
+  const $stakesNow=document.getElementById("stakes-now"), $hist=document.getElementById("stakes-hist");
+  const $share=document.getElementById("share"), $toast=document.getElementById("toast");
+  const LIVE_URL="https://agentgaming.app";
+  const hist=[];
   const keys=new Set();
   let mouse={x:W/2,y:H/2,down:false};
   let human=null, rounds=[0,0], tLeft=ROUND, last=performance.now();
@@ -206,6 +243,46 @@
     feed.unshift({html, clk:clockStamp()});
     if(feed.length>5) feed.pop();
     paintTicks();
+  }
+  function emptySlot(){
+    const li=document.createElement("li");
+    li.className="empty";
+    li.setAttribute("aria-hidden","true");
+    li.textContent="—";
+    return li;
+  }
+  function paintStakes(){
+    const you=liveYou();
+    let line="This round · first to "+TO+" · <b>"+scoreNow()+"</b> · leaders house <b>"+money0+"</b>";
+    if(human===0||human===1){
+      const cpw=rounds[human]?money(spent[human]/rounds[human]):"—";
+      line+=" · you <b>"+cpw+"</b>";
+    } else if(you && (you.spentN>0 || you.wins>0)){
+      const cpw=you.wins?money(you.spentN/you.wins):"—";
+      line+=" · people <b>"+cpw+"</b>";
+    }
+    $stakesNow.innerHTML=line;
+    $hist.replaceChildren();
+    const last=hist.slice(-3);
+    if(!last.length){
+      const empty=document.createElement("li");
+      empty.className="empty";
+      empty.textContent="No rounds in.";
+      $hist.appendChild(empty);
+      $hist.appendChild(emptySlot());
+      $hist.appendChild(emptySlot());
+      return;
+    }
+    last.forEach(r=>{
+      const li=document.createElement("li");
+      const name=document.createElement("span");
+      name.className=r.winner===0?"tick-bot":"tick-build";
+      name.textContent=WHO[r.winner];
+      li.appendChild(name);
+      li.appendChild(document.createTextNode(" "+r.score));
+      $hist.appendChild(li);
+    });
+    for(let i=last.length;i<3;i++) $hist.appendChild(emptySlot());
   }
   const ships=[], bullets=[];
   const LBKEY="ag-arena-one-lb-v2";
@@ -331,6 +408,8 @@
     if(you) board.you=you;
     const sig=filter+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+board.botWins.join(",")+"|"+rounds.join(",");
     if(sig!==hud.lbSig){ hud.lbSig=sig; renderLb(); }
+    const stakesSig=firstTo()+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+hist.length+"|"+(human==null?"h":"s");
+    if(stakesSig!==hud.stakesSig){ hud.stakesSig=stakesSig; paintStakes(); }
   }
   function syncBooth(){
     const seated=human===0||human===1;
@@ -355,6 +434,48 @@
     document.getElementById("stage").scrollIntoView({behavior:"smooth",block:"center"});
     canvas.focus();
   };
+  function toast(msg){
+    $toast.textContent=msg;
+    $toast.hidden=false;
+    clearTimeout(toast.tid);
+    toast.tid=setTimeout(()=>{ $toast.hidden=true; }, 2200);
+  }
+  function fallbackCopy(){
+    try {
+      const ta=document.createElement("textarea");
+      ta.value=LIVE_URL;
+      ta.setAttribute("readonly","");
+      ta.style.position="fixed";
+      ta.style.left="-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok=document.execCommand("copy");
+      document.body.removeChild(ta);
+      toast(ok?"Link copied. Send it.":"Copy failed. agentgaming.app");
+    } catch(e){ toast("Copy failed. agentgaming.app"); }
+  }
+  function copyLive(){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(LIVE_URL).then(()=>toast("Link copied. Send it.")).catch(fallbackCopy);
+      return;
+    }
+    fallbackCopy();
+  }
+  function shareFight(){
+    const mobile=matchMedia("(pointer: coarse)").matches || matchMedia("(max-width: 640px)").matches;
+    if(mobile && typeof navigator.share==="function"){
+      const payload={title:"Arena One — Agent Gaming", text:"Watch the match. Take a seat.", url:LIVE_URL};
+      if(!navigator.canShare || navigator.canShare(payload)){
+        navigator.share(payload).catch(e=>{
+          if(e && e.name==="AbortError") return;
+          copyLive();
+        });
+        return;
+      }
+    }
+    copyLive();
+  }
+  $share.addEventListener("click", shareFight);
   $seat.onclick=()=>{
     if(human===0||human===1) return;
     human=0; ships[0].bot=false; ships[1].bot=true;
@@ -379,10 +500,15 @@
   const $bid=document.getElementById("sponsorProduct");
   const $cta=document.getElementById("sponsorBtn");
   const sanitizeBid=raw=>String(raw).trim().replace(/[:/.@]/g,"-").replace(/[^A-Za-z0-9_-]/g,"").slice(0,200);
-  function syncSponsor(){ $cta.disabled=sanitizeBid($bid.value).length===0; }
+  const $unlock=document.getElementById("sponsor-unlock");
+  function syncSponsor(){
+    const armed=sanitizeBid($bid.value).length>0;
+    $cta.classList.toggle("ghost", !armed);
+    $unlock.hidden=armed;
+  }
   function openCardRail(){
     const id=sanitizeBid($bid.value);
-    if(!id) return;
+    if(!id){ $bid.focus(); return; }
     window.open(PAY_LINK+"?client_reference_id="+encodeURIComponent(id), "_blank", "noopener,noreferrer");
   }
   $bid.addEventListener("input", syncSponsor);
@@ -418,6 +544,9 @@
     $jersey.appendChild(dash);
     $plate.classList.remove("is-live");
     $plate.dataset.empty="true";
+    $plate.setAttribute("role","button");
+    $plate.tabIndex=0;
+    $plate.setAttribute("aria-label","Sponsor this fight, $20");
   }
   function setFightSponsor(s){
     const name=s && typeof s.name==="string" ? s.name.trim().slice(0,80) : "";
@@ -440,7 +569,25 @@
     $jersey.appendChild(label);
     $plate.classList.add("is-live");
     $plate.dataset.empty="false";
+    $plate.removeAttribute("role");
+    $plate.removeAttribute("tabindex");
+    $plate.setAttribute("aria-label","This fight sponsored by "+(name||"Sponsor"));
   }
+  function openBidField(){
+    $bid.scrollIntoView({behavior:"smooth",block:"center"});
+    $bid.focus();
+  }
+  $plate.addEventListener("click", e=>{
+    if($plate.dataset.empty!=="true") return;
+    if(e.target.closest("a")) return;
+    openBidField();
+  });
+  $plate.addEventListener("keydown", e=>{
+    if($plate.dataset.empty!=="true") return;
+    if(e.key!=="Enter" && e.key!==" ") return;
+    e.preventDefault();
+    openBidField();
+  });
   paintGhost();
   if(window.AG_FIGHT_SPONSOR) setFightSponsor(window.AG_FIGHT_SPONSOR);
   window.AG_setFightSponsor=setFightSponsor;
@@ -535,6 +682,9 @@
       say(winner===0?"Grok Bot takes the round.":"Grok Build takes the round.");
       const point=rounds[winner]===TO-1 && rounds[0]<TO && rounds[1]<TO;
       tick(who(winner)+" drops "+who(winner^1)+"."+(point?" Match point.":"")+" <b>"+firstTo()+"</b>");
+      hist.push({winner, score:scoreNow()});
+      if(hist.length>3) hist.splice(0, hist.length-3);
+      paintStakes();
     }
     $s1.textContent=rounds[0]; $s2.textContent=rounds[1];
     if(rounds[0]>=TO || rounds[1]>=TO){
