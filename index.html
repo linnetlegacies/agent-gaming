@@ -100,6 +100,8 @@
   .ghost-offer { margin:6px 0 0; font-size:11px; font-weight:800; letter-spacing:.04em; color:var(--lime); }
   .ghost-empty { margin:3px 0 0; font-size:10px; color:var(--muted); }
   .ghost-plate.is-live .ghost-offer, .ghost-plate.is-live .ghost-empty { display:none; }
+  .ghost-plate.is-pending { border-style:solid; border-color:var(--lime); }
+  .ghost-plate.is-pending .ghost-empty { color:var(--lime); font-weight:800; }
   .ghost-plate.is-live .ghost-jersey { border-style:solid; border-color:var(--desk); gap:8px; padding:6px 8px; color:var(--ink); }
   .ghost-name { font-size:13px; font-weight:800; letter-spacing:.04em; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:11em; }
   .ghost-plate img { width:28px; height:28px; object-fit:contain; background:#000; border-radius:4px; flex-shrink:0; }
@@ -634,6 +636,33 @@
     } catch(e){}
     return "";
   };
+  const RETURN_KEY="ag-light-return";
+  const $ghostEmpty=$plate.querySelector(".ghost-empty");
+  const $sponsorNote=document.getElementById("sponsor-note");
+  function paidReturn(){
+    const q=new URLSearchParams(location.search);
+    const light=q.get("light")==="1";
+    const sid=String(q.get("session_id")||"");
+    const fromRail=sid.slice(0,3)==="cs_";
+    if(light || fromRail){
+      try { sessionStorage.setItem(RETURN_KEY,"1"); } catch(e){}
+      if(q.has("session_id")){
+        q.delete("session_id");
+        const qs=q.toString();
+        history.replaceState({}, "", location.pathname+(qs?"?"+qs:"")+location.hash);
+      }
+      return true;
+    }
+    try { return sessionStorage.getItem(RETURN_KEY)==="1"; } catch(e){ return false; }
+  }
+  function markBidReceived(){
+    if($plate.classList.contains("is-live")) return;
+    $plate.classList.add("is-pending");
+    $plate.dataset.return="1";
+    if($ghostEmpty) $ghostEmpty.textContent="Bid received. Jersey lands on this fight.";
+    $plate.setAttribute("aria-label","Bid received. Jersey lands on this fight.");
+    if($sponsorNote) $sponsorNote.textContent="Bid received. Jersey lands on this fight. House lights stay until a paid bid lands.";
+  }
   function paintGhost(){
     $jersey.replaceChildren();
     const dash=document.createElement("span");
@@ -646,6 +675,12 @@
     $plate.setAttribute("role","button");
     $plate.tabIndex=0;
     $plate.setAttribute("aria-label","Sponsor this fight, $20");
+    if(paidReturn()) markBidReceived();
+    else {
+      $plate.classList.remove("is-pending");
+      $plate.removeAttribute("data-return");
+      if($ghostEmpty) $ghostEmpty.textContent="No bid yet — be the first";
+    }
   }
   function setFightSponsor(s){
     const name=s && typeof s.name==="string" ? s.name.trim().slice(0,80) : "";
@@ -667,6 +702,8 @@
     if(url){ label.href=url; label.target="_blank"; label.rel="noopener noreferrer"; }
     $jersey.appendChild(label);
     $plate.classList.add("is-live");
+    $plate.classList.remove("is-pending");
+    $plate.removeAttribute("data-return");
     $plate.dataset.empty="false";
     $plate.removeAttribute("role");
     $plate.removeAttribute("tabindex");
@@ -690,6 +727,12 @@
   paintGhost();
   if(window.AG_FIGHT_SPONSOR) setFightSponsor(window.AG_FIGHT_SPONSOR);
   window.AG_setFightSponsor=setFightSponsor;
+  if(paidReturn() && !$plate.classList.contains("is-live")){
+    markBidReceived();
+    sting("BID RECEIVED","lime");
+    say("Bid received. Jersey lands on this fight.");
+    tick("Bid received. Jersey lands on this fight.");
+  }
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE + (s.id===1 && s.bot ? 0.08*Math.random() : 0);
