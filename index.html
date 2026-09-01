@@ -291,7 +291,7 @@
   let mouse={x:W/2,y:H/2,down:false};
   const stick={active:false,id:null,ox:0,oy:0,x:0,y:0};
   const aimTouch={active:false,id:null,x:0,y:0};
-  let touchLock=0;
+  let touchLock=-1e9;
   let human=null, rounds=[0,0], tLeft=ROUND, last=performance.now();
   let freeze=0, ending=false, spent=[0,0], shots=[0,0];
   let shake=0, flashTint=0, flashColor="#fff";
@@ -554,6 +554,9 @@
   }
   function markTouch(){ touchLock=performance.now(); }
   function fromTouch(){ return performance.now()-touchLock<700; }
+  function phoneRink(){
+    return matchMedia("(pointer: coarse)").matches || matchMedia("(max-width: 640px)").matches;
+  }
   function bindStick(id,p){
     stick.active=true; stick.id=id; stick.ox=p.x; stick.oy=p.y; stick.x=p.x; stick.y=p.y;
   }
@@ -579,6 +582,7 @@
     if(fromTouch()) return;
     const p=canvasXY(e);
     mouse.x=p.x; mouse.y=p.y;
+    if(phoneRink() && stick.active && stick.id==="mouse") onCanvasMove(p,"mouse");
   });
   canvas.addEventListener("mousedown",e=>{
     if(fromTouch()) return;
@@ -586,8 +590,13 @@
     const p=canvasXY(e);
     mouse.x=p.x; mouse.y=p.y;
     takeSeat();
+    if(phoneRink() && !stick.active) bindStick("mouse",p);
   });
-  addEventListener("mouseup",()=>{ if(!fromTouch()) mouse.down=false; });
+  addEventListener("mouseup",()=>{
+    if(fromTouch()) return;
+    mouse.down=false;
+    if(stick.id==="mouse") onCanvasUp("mouse");
+  });
   canvas.addEventListener("touchstart",e=>{
     e.preventDefault();
     markTouch();
