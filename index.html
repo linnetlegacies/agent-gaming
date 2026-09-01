@@ -64,8 +64,8 @@
   .tick-bot { color:var(--desk); font-weight:700; }
   .tick-build { color:var(--lime); font-weight:700; }
   #stage { position:relative; flex:1; display:flex; flex-direction:column; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
-  #rink { position:relative; flex:1; min-width:0; width:100%; touch-action:none; }
-  #rink canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; touch-action:none; user-select:none; -webkit-user-select:none; }
+  #rink { position:relative; flex:1; min-width:0; width:100%; touch-action:none; overscroll-behavior:none; }
+  #rink canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; touch-action:none; overscroll-behavior:none; user-select:none; -webkit-user-select:none; }
   #broadcast { position:absolute; inset:0; pointer-events:none; z-index:2; }
   #rule-rail { position:absolute; top:10px; left:12px; right:248px; text-align:center; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); background:rgba(10,10,10,.78); border:1px solid var(--line); border-radius:999px; padding:5px 12px; }
   #plates { display:flex; justify-content:space-between; gap:10px; margin-top:8px; width:100%; }
@@ -557,8 +557,14 @@
   function phoneRink(){
     return matchMedia("(pointer: coarse)").matches || matchMedia("(max-width: 640px)").matches;
   }
+  function lockScroll(on){
+    if(!phoneRink()) return;
+    document.documentElement.style.overflow=on?"hidden":"";
+    document.body.style.overflow=on?"hidden":"";
+  }
   function bindStick(id,p){
     stick.active=true; stick.id=id; stick.ox=p.x; stick.oy=p.y; stick.x=p.x; stick.y=p.y;
+    lockScroll(true);
   }
   function bindAim(id,p){
     aimTouch.active=true; aimTouch.id=id; aimTouch.x=p.x; aimTouch.y=p.y;
@@ -573,19 +579,21 @@
     if(aimTouch.active && id===aimTouch.id){ aimTouch.x=p.x; aimTouch.y=p.y; }
   }
   function onCanvasUp(id){
-    if(stick.active && id===stick.id){ stick.active=false; stick.id=null; }
+    if(stick.active && id===stick.id){ stick.active=false; stick.id=null; lockScroll(false); }
     if(aimTouch.active && id===aimTouch.id){ aimTouch.active=false; aimTouch.id=null; }
   }
   addEventListener("keydown",e=>{ keys.add(e.key.toLowerCase()); if(e.code==="Space") e.preventDefault(); });
   addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
   canvas.addEventListener("mousemove",e=>{
     if(fromTouch()) return;
+    if(phoneRink() && stick.active && stick.id==="mouse") e.preventDefault();
     const p=canvasXY(e);
     mouse.x=p.x; mouse.y=p.y;
     if(phoneRink() && stick.active && stick.id==="mouse") onCanvasMove(p,"mouse");
   });
   canvas.addEventListener("mousedown",e=>{
     if(fromTouch()) return;
+    if(phoneRink()) e.preventDefault();
     mouse.down=true;
     const p=canvasXY(e);
     mouse.x=p.x; mouse.y=p.y;
@@ -614,6 +622,7 @@
   };
   canvas.addEventListener("touchend", endTouch, {passive:false});
   canvas.addEventListener("touchcancel", endTouch, {passive:false});
+  addEventListener("touchmove",e=>{ if(stick.active) e.preventDefault(); }, {passive:false});
   $watch.onclick=()=>{
     document.getElementById("stage").scrollIntoView({behavior:"smooth",block:"center"});
     canvas.focus();
@@ -668,6 +677,7 @@
     stick.active=false; stick.id=null;
     aimTouch.active=false; aimTouch.id=null;
     mouse.down=false;
+    lockScroll(false);
     syncBooth();
     say("Watching. House Grok vs Grok Build.");
     renderLb();
