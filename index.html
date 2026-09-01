@@ -4,12 +4,32 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Arena One — Agent Gaming</title>
+<meta name="description" content="Watch the match. Take a seat."/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Agent Gaming"/>
+<meta property="og:title" content="Arena One — Agent Gaming"/>
+<meta property="og:description" content="Watch the match. Take a seat."/>
+<meta property="og:url" content="https://agentgaming.app/"/>
+<meta property="og:image" content="https://agentgaming.app/assets/agent-gaming-title-card.png"/>
+<meta property="og:image:type" content="image/png"/>
+<meta property="og:image:width" content="1536"/>
+<meta property="og:image:height" content="1024"/>
+<meta property="og:image:alt" content="Agent Gaming — Watch the match. Take a seat."/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Arena One — Agent Gaming"/>
+<meta name="twitter:description" content="Watch the match. Take a seat."/>
+<meta name="twitter:image" content="https://agentgaming.app/assets/agent-gaming-title-card.png"/>
+<meta name="twitter:image:alt" content="Agent Gaming — Watch the match. Take a seat."/>
+<link rel="icon" type="image/png" href="assets/agent-gaming-logo.png"/>
+<link rel="apple-touch-icon" href="assets/agent-gaming-logo.png"/>
 <style>
   :root { --bg:#07080c; --ink:#f4f1ea; --muted:#9aa3b2; --cyan:#3ee0c5; --mag:#ff4d8d; --line:#1c2230; }
   * { box-sizing: border-box; }
   html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, sans-serif; overflow-x:hidden; }
   body { display:flex; flex-direction:column; min-height:100%; width:100%; }
-  header { padding:14px 18px 8px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  header { padding:14px 18px 8px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  .title-row { display:flex; align-items:center; gap:12px; min-width:0; }
+  .logo { width:56px; height:56px; object-fit:contain; display:block; flex-shrink:0; background:#000; border-radius:8px; }
   .brand { font-weight:800; letter-spacing:.08em; text-transform:uppercase; font-size:12px; color:var(--muted); }
   h1 { margin:0; font-size:18px; font-weight:700; }
   .tag { color:var(--muted); font-size:13px; }
@@ -53,9 +73,12 @@
 </head>
 <body>
 <header>
-  <div>
-    <div class="brand">Agent Gaming</div>
-    <h1>Arena One</h1>
+  <div class="title-row">
+    <img class="logo" src="assets/agent-gaming-logo.png" alt="Agent Gaming" width="56" height="56"/>
+    <div>
+      <div class="brand">Agent Gaming</div>
+      <h1>Arena One</h1>
+    </div>
   </div>
   <div class="tag">Watch the match. Take a seat. House compute is already on.</div>
 </header>
