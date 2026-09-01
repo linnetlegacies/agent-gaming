@@ -23,7 +23,7 @@
 <link rel="icon" type="image/png" href="assets/agent-gaming-logo.png"/>
 <link rel="apple-touch-icon" href="assets/agent-gaming-logo.png"/>
 <style>
-  :root { --bg:#07080c; --ink:#f4f1ea; --muted:#9aa3b2; --cyan:#3ee0c5; --mag:#ff4d8d; --line:#1c2230; }
+  :root { --bg:#0A0A0A; --ink:#f4f1ea; --muted:#9aa3b2; --cyan:#3ee0c5; --mag:#ff4d8d; --line:#1c2230; }
   * { box-sizing: border-box; }
   html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, sans-serif; overflow-x:hidden; }
   body { display:flex; flex-direction:column; min-height:100%; width:100%; }
@@ -41,11 +41,12 @@
   .cost { font-size:12px; color:var(--muted); }
   .cost b { color:var(--ink); font-weight:700; }
   #announcer { min-height:1.4em; padding:0 18px 10px; color:var(--muted); font-size:14px; letter-spacing:.02em; }
-  #stage { flex:1; display:flex; align-items:center; justify-content:center; padding:0 12px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
-  canvas { width:100%; max-width:960px; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
+  #stage { flex:1; display:flex; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
+  canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
   #bar { display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 12px; align-items:center; }
   button { background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; }
   button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  #bar button.on { background:#C8FF3D; color:#0A0A0A; border:0; opacity:1; }
   button:disabled { opacity:.4; cursor:default; }
   button.live { background:#C8FF3D; color:#0A0A0A; border:0; border-radius:999px; padding:3px 10px 3px 8px; font-size:11px; font-weight:800; letter-spacing:.1em; display:inline-flex; align-items:center; gap:6px; }
   button.live::before { content:""; width:7px; height:7px; border-radius:50%; background:#0A0A0A; animation:livepulse 1s ease-in-out infinite; }
@@ -58,7 +59,7 @@
   .seg { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
   .seg button { border-radius:0; background:transparent; color:var(--muted); padding:7px 12px; font-size:12px; font-weight:700; border:0; }
   .seg button.on { background:var(--ink); color:var(--bg); }
-  table { width:100%; max-width:960px; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+  table { width:100%; max-width:none; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
   th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
   th { color:var(--muted); font-weight:600; }
   .kind { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
@@ -101,8 +102,8 @@
 <div id="announcer">Match live. House Grok vs Grok Build.</div>
 <div id="stage"><canvas id="c" width="960" height="540" tabindex="0"></canvas></div>
 <div id="bar">
-  <button id="seat" type="button">Take a seat</button>
-  <button id="spec" class="ghost" type="button" disabled>Spectate</button>
+  <button id="seat" type="button" aria-pressed="false">Take a seat</button>
+  <button id="spec" class="on" type="button" aria-pressed="true">Spectate</button>
   <span class="hint">WASD / arrows move · mouse aim · click or space to shoot</span>
 </div>
 <section id="sponsor">
@@ -112,7 +113,7 @@
     <a class="jersey" href="https://getfreedomos.com" rel="noopener noreferrer">FreedomOS</a>
     <a class="jersey" href="https://dogoodforyourbody.com" rel="noopener noreferrer">Daily De-Caffeinate</a>
   </div>
-  <p id="sponsor-note" class="hint">Your URL or @handle is the bid. Stripe takes the card. First paid bid is CEO-reviewed before it replaces house lights. Seat and spectate stay free.</p>
+  <p id="sponsor-note" class="hint">Your URL or @handle is the bid. Stripe takes the card. A paid, pledge-clean bid lands on this fight. Seat and spectate stay free. House lights stay until a paid bid lands.</p>
   <div class="row bid-row">
     <label class="bid-field" for="sponsorProduct">
       <svg class="globe" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -161,7 +162,7 @@
   const say=s=>{ $ann.textContent=s; };
   const ships=[], bullets=[];
   const LBKEY="ag-arena-one-lb-v2";
-  let filter="people";
+  let filter="bots";
   function loadBoard(){
     try {
       const raw=JSON.parse(localStorage.getItem(LBKEY)||"null");
@@ -193,8 +194,10 @@
     const you=liveYou();
     if(you && filter!=="bots") rows.push(you);
     if(filter!=="people"){
-      rows.push({ kind:"model", who:"GROK BOT", spentN:0, wins:board.botWins[0], cls:"cyan" });
-      rows.push({ kind:"bot", who:"GROK BUILD", spentN:0, wins:board.botWins[1], cls:"mag" });
+      const live0=human!==0?rounds[0]:0;
+      const live1=human!==1?rounds[1]:0;
+      rows.push({ kind:"model", who:"GROK BOT", spentN:0, wins:board.botWins[0]+live0, cls:"cyan" });
+      rows.push({ kind:"bot", who:"GROK BUILD", spentN:0, wins:board.botWins[1]+live1, cls:"mag" });
     }
     rows.sort((a,b)=> (b.spentN-a.spentN) || (b.wins-a.wins));
     return rows;
@@ -274,11 +277,20 @@
     $clock.textContent = Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
     const you=liveYou();
     if(you) board.you=you;
-    const sig=filter+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+board.botWins.join(",");
+    const sig=filter+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+board.botWins.join(",")+"|"+rounds.join(",");
     if(sig!==hud.lbSig){ hud.lbSig=sig; renderLb(); }
   }
+  function syncBooth(){
+    const seated=human===0||human===1;
+    $seat.classList.toggle("on", seated);
+    $spec.classList.toggle("on", !seated);
+    $spec.classList.toggle("ghost", seated);
+    $seat.setAttribute("aria-pressed", seated?"true":"false");
+    $spec.setAttribute("aria-pressed", seated?"false":"true");
+  }
   newMatch("Match live. House Grok vs Grok Build.");
-  setFilter("people");
+  setFilter("bots");
+  syncBooth();
   addEventListener("keydown",e=>{ keys.add(e.key.toLowerCase()); if(e.code==="Space") e.preventDefault(); });
   addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
   canvas.addEventListener("mousemove",e=>{
@@ -292,17 +304,19 @@
     canvas.focus();
   };
   $seat.onclick=()=>{
+    if(human===0||human===1) return;
     human=0; ships[0].bot=false; ships[1].bot=true;
-    $seat.disabled=true; $spec.disabled=false;
     board.you=liveYou();
     saveBoard(board);
+    syncBooth();
     say("Cyan seat taken. You're on the people board. Grok Build stays the JS twin.");
     renderLb();
   };
   $spec.onclick=()=>{
+    if(human==null) return;
     if(human===0||human===1){ board.you=liveYou(); saveBoard(board); }
     human=null; ships.forEach(s=>s.bot=true);
-    $seat.disabled=false; $spec.disabled=true;
+    syncBooth();
     say("Back to the booth. House fight is still on.");
     renderLb();
   };
