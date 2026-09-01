@@ -23,7 +23,7 @@
 <link rel="icon" type="image/png" href="assets/agent-gaming-logo.png"/>
 <link rel="apple-touch-icon" href="assets/agent-gaming-logo.png"/>
 <style>
-  :root { --bg:#0A0A0A; --ink:#f4f1ea; --muted:#9aa3b2; --cyan:#3ee0c5; --mag:#ff4d8d; --line:#1c2230; --lime:#C8FF3D; --desk:#00E5FF; }
+  :root { --bg:#0A0A0A; --ink:#f4f1ea; --muted:#9aa3b2; --cyan:#00E5FF; --mag:#C8FF3D; --line:#1c2230; --lime:#C8FF3D; --desk:#00E5FF; }
   * { box-sizing: border-box; }
   html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, sans-serif; overflow-x:hidden; }
   body { display:flex; flex-direction:column; min-height:100%; width:100%; }
@@ -63,9 +63,36 @@
   .tick .clk { flex:0 0 2.6em; font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted); }
   .tick-bot { color:var(--desk); font-weight:700; }
   .tick-build { color:var(--lime); font-weight:700; }
-  #stage { position:relative; flex:1; display:flex; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
-  canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
-  .ghost-plate { position:absolute; top:18px; right:18px; z-index:2; min-width:156px; max-width:min(228px,46%); padding:8px 10px 9px; background:rgba(10,10,10,.78); border:1px dashed var(--desk); border-radius:8px; pointer-events:auto; cursor:pointer; }
+  #stage { position:relative; flex:1; display:flex; flex-direction:column; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
+  #rink { position:relative; flex:1; min-width:0; width:100%; }
+  #rink canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
+  #broadcast { position:absolute; inset:0; pointer-events:none; z-index:2; }
+  #rule-rail { position:absolute; top:10px; left:12px; right:248px; text-align:center; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); background:rgba(10,10,10,.78); border:1px solid var(--line); border-radius:999px; padding:5px 12px; }
+  #plates { display:flex; justify-content:space-between; gap:10px; margin-top:8px; width:100%; }
+  .plate { min-width:0; flex:1; background:rgba(10,10,10,.92); border:1px solid var(--line); border-radius:8px; padding:6px 8px 7px; }
+  .plate.cyan { border-color:var(--cyan); }
+  .plate.lime { border-color:var(--lime); text-align:right; }
+  .plate-name { font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .plate.cyan .plate-name { color:var(--cyan); }
+  .plate.lime .plate-name { color:var(--lime); }
+  .plate-life { height:8px; background:#1c2230; border-radius:99px; overflow:hidden; margin:5px 0 3px; box-shadow:inset 0 0 0 1px #0A0A0A; }
+  .plate-life i { display:block; height:100%; width:100%; }
+  .plate.cyan .plate-life i { background:var(--cyan); }
+  .plate.lime .plate-life i { background:var(--lime); }
+  .plate-hp { font-size:10px; font-weight:800; letter-spacing:.04em; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .plate.hit { box-shadow:0 0 0 3px #fff; }
+  #sting { position:absolute; left:50%; top:42%; transform:translate(-50%,-50%); z-index:4; margin:0; font-weight:900; font-size:clamp(28px, 7vw, 64px); letter-spacing:.1em; text-transform:uppercase; color:#fff; text-shadow:0 0 28px currentColor, 0 2px 0 #0A0A0A; white-space:nowrap; animation:stingIn .16s ease-out; }
+  #sting[hidden] { display:none; }
+  #sting.cyan { color:var(--cyan); }
+  #sting.lime { color:var(--lime); }
+  @keyframes stingIn { from { transform:translate(-50%,-50%) scale(1.45); opacity:0; } to { transform:translate(-50%,-50%) scale(1); opacity:1; } }
+  @media (max-width:640px){
+    #rule-rail { left:8px; right:8px; font-size:9px; letter-spacing:.06em; line-height:1.35; padding:6px 10px; }
+    .plate { padding:5px 7px 6px; }
+    .plate-name { font-size:10px; }
+    #sting { font-size:clamp(22px, 8vw, 40px); white-space:normal; text-align:center; }
+  }
+  .ghost-plate { position:absolute; top:18px; right:18px; z-index:3; min-width:156px; max-width:min(228px,46%); padding:8px 10px 9px; background:rgba(10,10,10,.78); border:1px dashed var(--desk); border-radius:8px; pointer-events:auto; cursor:pointer; }
   .ghost-plate.is-live { border-style:solid; border-color:var(--lime); cursor:default; }
   .ghost-kicker { margin:0 0 6px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--lime); }
   .ghost-jersey { display:flex; align-items:center; justify-content:center; min-height:38px; border:1px dashed var(--line); border-radius:6px; color:var(--muted); text-decoration:none; }
@@ -163,7 +190,25 @@
     <p class="ghost-offer">$20 · this fight</p>
     <p class="ghost-empty">No bid yet — be the first</p>
   </aside>
-  <canvas id="c" width="960" height="540" tabindex="0"></canvas>
+  <div id="rink">
+    <canvas id="c" width="960" height="540" tabindex="0"></canvas>
+    <div id="broadcast" aria-hidden="true">
+      <div id="rule-rail">SHOOT · DODGE · DROP THEM — FIRST TO 3</div>
+      <p id="sting" hidden></p>
+    </div>
+  </div>
+  <div id="plates" aria-label="Fighter life">
+    <div class="plate cyan" id="plate-l">
+      <div class="plate-name" id="pn1">GROK BOT</div>
+      <div class="plate-life"><i id="hp1"></i></div>
+      <div class="plate-hp"><span id="life1">8</span> HP</div>
+    </div>
+    <div class="plate lime" id="plate-r">
+      <div class="plate-name" id="pn2">GROK BUILD</div>
+      <div class="plate-life"><i id="hp2"></i></div>
+      <div class="plate-hp"><span id="life2">8</span> HP</div>
+    </div>
+  </div>
 </div>
 <div id="bar">
   <button id="seat" type="button" aria-pressed="false">Take a seat</button>
@@ -209,6 +254,7 @@
 (() => {
   const W=960, H=540, R=16, SPEED=175, BULLET=340, BRLIFE=0.75, FIRE=0.55, HP=8, ROUND=60, TO=3, BEAT=1;
   const WATCH=0.00035, SHOT=0.0018;
+  const COL=["#00E5FF","#C8FF3D"];
   const canvas=document.getElementById("c"), ctx=canvas.getContext("2d");
   const $s1=document.getElementById("s1"), $s2=document.getElementById("s2");
   const $c1=document.getElementById("c1"), $c2=document.getElementById("c2");
@@ -220,6 +266,11 @@
   const $n1=document.getElementById("n1"), $n2=document.getElementById("n2");
   const $hudL=document.getElementById("hud-l"), $hudR=document.getElementById("hud-r");
   const $desk=document.getElementById("desk");
+  const $pn1=document.getElementById("pn1"), $pn2=document.getElementById("pn2");
+  const $hp1=document.getElementById("hp1"), $hp2=document.getElementById("hp2");
+  const $life1=document.getElementById("life1"), $life2=document.getElementById("life2");
+  const $plateL=document.getElementById("plate-l"), $plateR=document.getElementById("plate-r");
+  const $sting=document.getElementById("sting");
   const $fPeople=document.getElementById("f-people"), $fBots=document.getElementById("f-bots"), $fAll=document.getElementById("f-all");
   const $stakesNow=document.getElementById("stakes-now"), $hist=document.getElementById("stakes-hist");
   const $share=document.getElementById("share"), $toast=document.getElementById("toast");
@@ -229,10 +280,42 @@
   let mouse={x:W/2,y:H/2,down:false};
   let human=null, rounds=[0,0], tLeft=ROUND, last=performance.now();
   let freeze=0, ending=false, spent=[0,0], shots=[0,0];
+  let shake=0, flashTint=0, flashColor="#fff";
+  const impacts=[];
   const money=n=>"$"+n.toFixed(3);
   const money0="$0.00";
   const perWin=(side)=> rounds[side] ? money(spent[side]/rounds[side]) : "—";
   const say=s=>{ $ann.textContent=s; };
+  function sting(msg, cls){
+    $sting.textContent=msg;
+    $sting.className=cls||"";
+    $sting.hidden=false;
+    clearTimeout(sting.tid);
+    sting.tid=setTimeout(()=>{ $sting.hidden=true; $sting.textContent=""; $sting.className=""; }, 1100);
+  }
+  function flashPlate(id){
+    const el=id===0?$plateL:$plateR;
+    el.classList.remove("hit");
+    void el.offsetWidth;
+    el.classList.add("hit");
+    clearTimeout(el.hitTid);
+    el.hitTid=setTimeout(()=>el.classList.remove("hit"), 180);
+  }
+  function bang(x,y,color){
+    impacts.push({x,y,r:10,life:0.32,color});
+    shake=0.18;
+    flashTint=0.28;
+    flashColor=color;
+  }
+  function paintPlates(){
+    for(const s of ships){
+      const hp=s && s.alive ? Math.max(0,s.hp) : 0;
+      const bar=s.id===0?$hp1:$hp2;
+      const life=s.id===0?$life1:$life2;
+      bar.style.width=(100*hp/HP)+"%";
+      life.textContent=hp;
+    }
+  }
   const WHO=["Grok Bot","Grok Build"];
   const feed=[];
   const clockStamp=()=>{ const s=Math.max(0, Math.ceil(tLeft)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
@@ -352,14 +435,14 @@
     renderLb();
   }
   function charge(id, n){ if(human===id) spent[id]+=n; }
-  const mk=(id,color,x,y)=>({id,color,x,y,a:0,vx:0,vy:0,hp:HP,cd:0.4+id*0.2,bot:true,alive:true,miss:id?0.18:0.22,breakOff:0,breakDir:1});
+  const mk=(id,color,x,y)=>({id,color,x,y,a:0,vx:0,vy:0,hp:HP,cd:0.4+id*0.2,bot:true,alive:true,miss:id?0.18:0.22,breakOff:0,breakDir:1,hit:0});
   const wrapA=a=>(a+Math.PI*3)%(Math.PI*2)-Math.PI;
   function spawnShips(){
     ships.length=0; bullets.length=0;
     // Mid-fight pose: already in gun range, crossing, tracers in the air.
     // Idle corners (180 / W-180, same Y) sit ~600px apart — grokPolicy will
     // not fire until dist<=400, so a cold load looked like two parked ships.
-    ships.push(mk(0,"#3ee0c5",320,H/2-62), mk(1,"#ff4d8d",640,H/2+54));
+    ships.push(mk(0,COL[0],320,H/2-62), mk(1,COL[1],640,H/2+54));
     ships[0].a=0.32; ships[1].a=Math.PI-0.26;
     ships[0].cd=0; ships[1].cd=0;
     ships[0].vx=80; ships[0].vy=120;
@@ -389,7 +472,8 @@
     snapshotBoard();
     rounds=[0,0]; spent=[0,0]; shots=[0,0];
     $s1.textContent=0; $s2.textContent=0;
-    ending=false; freeze=0;
+    ending=false; freeze=0; shake=0; flashTint=0; impacts.length=0;
+    $sting.hidden=true; $sting.textContent=""; $sting.className="";
     resetArena();
     const line=reason || (human==null ? "Match live. House Grok vs Grok Build." : "You're in. Same fight.");
     say(line);
@@ -414,6 +498,7 @@
     if(sig!==hud.lbSig){ hud.lbSig=sig; renderLb(); }
     const stakesSig=firstTo()+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+hist.length+"|"+(human==null?"h":"s");
     if(stakesSig!==hud.stakesSig){ hud.stakesSig=stakesSig; paintStakes(); }
+    paintPlates();
   }
   function syncBooth(){
     const seated=human===0||human===1;
@@ -424,6 +509,8 @@
     $desk.textContent=seated?"You're in · WASD / arrows · mouse aim · click or space":"Watching. House Grok vs Grok Build.";
     $n1.textContent=human===0?"YOU · GROK BOT":"GROK BOT";
     $n2.textContent=human===1?"YOU · GROK BUILD":"GROK BUILD";
+    $pn1.textContent=$n1.textContent;
+    $pn2.textContent=$n2.textContent;
     $hudL.classList.toggle("you", human===0);
     $hudR.classList.toggle("you", human===1);
     $seat.setAttribute("aria-pressed", seated?"true":"false");
@@ -671,7 +758,7 @@
   function nextMatchLine(){
     return human==null ? "Next match. House Grok vs Grok Build." : "Next match. You're still in.";
   }
-  function finishMatch(reason){
+  function finishMatch(reason, alreadyStung){
     if(ending) return;
     ending=true;
     freeze=1.6;
@@ -679,6 +766,7 @@
     const champ=rounds[0]===rounds[1]?null:(rounds[0]>rounds[1]?0:1);
     if(champ==null) tick("Time. Nobody dropped. <b>"+scoreNow()+"</b>");
     else tick(who(champ)+" takes the match. <b>"+scoreNow()+"</b>");
+    if(!alreadyStung) sting(champ==null?"TIME":"MATCH WON", champ==null?"":(champ===0?"cyan":"lime"));
     setTimeout(()=>newMatch(nextMatchLine()), 1600);
   }
   function timeUp(){
@@ -689,10 +777,11 @@
   }
   function roundOver(winner){
     if(freeze>0 || ending) return;
+    let point=false;
     if(winner===0||winner===1){
       rounds[winner]++;
       say(winner===0?"Grok Bot takes the round.":"Grok Build takes the round.");
-      const point=rounds[winner]===TO-1 && rounds[0]<TO && rounds[1]<TO;
+      point=rounds[winner]===TO-1 && rounds[0]<TO && rounds[1]<TO;
       tick(who(winner)+" drops "+who(winner^1)+"."+(point?" Match point.":"")+" <b>"+firstTo()+"</b>");
       hist.push({winner, score:scoreNow()});
       if(hist.length>3) hist.splice(0, hist.length-3);
@@ -701,12 +790,22 @@
     $s1.textContent=rounds[0]; $s2.textContent=rounds[1];
     if(rounds[0]>=TO || rounds[1]>=TO){
       const champ=rounds[0]>rounds[1]?"Grok Bot":"Grok Build";
-      finishMatch(champ+" takes the match. Board updated.");
+      sting("MATCH WON", winner===0?"cyan":"lime");
+      finishMatch(champ+" takes the match. Board updated.", true);
       return;
     }
+    sting(point?"MATCH POINT":"ROUND WON", winner===0?"cyan":"lime");
     freeze=BEAT;
   }
+  function decayFx(dt){
+    shake=Math.max(0,shake-dt);
+    flashTint=Math.max(0,flashTint-dt*1.6);
+    for(const s of ships) if(s.hit>0) s.hit=Math.max(0,s.hit-dt);
+    for(const p of impacts){ p.life-=dt; p.r+=160*dt; }
+    for(let i=impacts.length-1;i>=0;i--) if(impacts[i].life<=0) impacts.splice(i,1);
+  }
   function step(dt){
+    decayFx(dt);
     if(ending){ freeze-=dt; hud(); return; }
     if(freeze>0){
       tLeft-=dt;
@@ -736,7 +835,9 @@
       for(const s of ships){
         if(!s.alive||s.id===b.owner) continue;
         if(Math.hypot(s.x-b.x,s.y-b.y)<R+3){
-          s.hp-=1; b.life=0;
+          s.hp-=1; b.life=0; s.hit=0.18;
+          bang(s.x,s.y,COL[b.owner]);
+          flashPlate(s.id);
           if(s.hp<=0){ s.alive=false; roundOver(b.owner); }
         }
       }
@@ -747,27 +848,62 @@
     hud();
   }
   function draw(){
+    ctx.save();
+    if(shake>0){
+      const mag=7*(shake/0.18);
+      ctx.translate((Math.random()-0.5)*mag,(Math.random()-0.5)*mag);
+    }
     ctx.fillStyle="#0b0e16"; ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle="#151b28"; ctx.lineWidth=1;
+    ctx.strokeStyle="#1a2230"; ctx.lineWidth=1;
     for(let x=40;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
     for(let y=40;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-    ctx.strokeStyle="#1e2638"; ctx.beginPath(); ctx.arc(W/2,H/2,70,0,Math.PI*2); ctx.stroke();
-    for(const b of bullets){ ctx.fillStyle=b.owner? "#ff4d8d":"#3ee0c5"; ctx.beginPath(); ctx.arc(b.x,b.y,3,0,Math.PI*2); ctx.fill(); }
+    ctx.strokeStyle="#2a3348"; ctx.beginPath(); ctx.arc(W/2,H/2,70,0,Math.PI*2); ctx.stroke();
+    for(const b of bullets){
+      ctx.fillStyle=COL[b.owner];
+      ctx.shadowColor=COL[b.owner]; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(b.x,b.y,3.5,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+    }
     for(const s of ships){
       if(!s.alive) continue;
       ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(s.a);
-      ctx.fillStyle=s.color;
+      ctx.shadowColor=s.color; ctx.shadowBlur=s.hit>0?32:14;
+      ctx.fillStyle=s.hit>0?"#fff":s.color;
       ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-12,11); ctx.lineTo(-6,0); ctx.lineTo(-12,-11); ctx.closePath(); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle="#0A0A0A"; ctx.lineWidth=2; ctx.stroke();
       ctx.restore();
-      ctx.fillStyle="#1c2230"; ctx.fillRect(s.x-18,s.y-26,36,4);
-      ctx.fillStyle=s.color; ctx.fillRect(s.x-18,s.y-26,36*(s.hp/HP),4);
+      ctx.fillStyle="#0A0A0A"; ctx.fillRect(s.x-24,s.y-32,48,7);
+      ctx.fillStyle=s.color; ctx.fillRect(s.x-24,s.y-32,48*(s.hp/HP),7);
+      ctx.strokeStyle="#f4f1ea"; ctx.lineWidth=1; ctx.strokeRect(s.x-24,s.y-32,48,7);
+      ctx.font="800 11px ui-sans-serif,system-ui,sans-serif";
+      ctx.textAlign="center";
+      ctx.lineWidth=3; ctx.strokeStyle="#0A0A0A";
+      const tag=!s.bot?"YOU · "+(s.id?"GROK BUILD":"GROK BOT"):(s.id?"GROK BUILD":"GROK BOT");
+      ctx.strokeText(tag,s.x,s.y+40);
+      ctx.fillStyle=s.color; ctx.fillText(tag,s.x,s.y+40);
       if(!s.bot){
         ctx.strokeStyle="#C8FF3D"; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.arc(s.x,s.y,22,0,Math.PI*2); ctx.stroke();
-        ctx.fillStyle="#C8FF3D"; ctx.font="700 10px ui-sans-serif,system-ui,sans-serif";
-        ctx.textAlign="center"; ctx.fillText("YOU",s.x,s.y+34);
+        ctx.beginPath(); ctx.arc(s.x,s.y,24,0,Math.PI*2); ctx.stroke();
+        ctx.fillStyle="#C8FF3D"; ctx.font="800 11px ui-sans-serif,system-ui,sans-serif";
+        ctx.fillText("YOU",s.x,s.y+54);
       }
     }
+    for(const p of impacts){
+      ctx.globalAlpha=Math.max(0,p.life/0.32);
+      ctx.strokeStyle=p.color; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle="#fff"; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*0.55,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+    if(flashTint>0){
+      ctx.fillStyle=flashColor;
+      ctx.globalAlpha=flashTint*0.42;
+      ctx.fillRect(0,0,W,H);
+      ctx.globalAlpha=1;
+    }
+    ctx.restore();
   }
   function loop(now){
     const dt=Math.min(0.033,(now-last)/1000); last=now;
