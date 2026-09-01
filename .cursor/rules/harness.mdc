@@ -1,0 +1,15 @@
+---
+description: Fetch Harness PRINCIPLES_INDEX at boot. Pointer only.
+alwaysApply: true
+---
+
+Harness canon lives in `github.com/timlinnet/harness`. Overlay: `github.com/timlinnet/harness-private`. This file is a pointer. Do not bake, vendor, or clone the canon into this repo.
+
+## Boot (Cursor Cloud, Grok Build)
+
+1. Fetch `PRINCIPLES_INDEX.md` from `github.com/timlinnet/harness` (`gh api` or `git`). Do not clone the repo into this tree.
+2. Load full entries only when they bear on the live change.
+3. Before any public URL / checkout / brand change, run three cuts:
+   - leftover — delete it
+   - compose — Arena One is the product; Stripe is the card rail
+   - substrate — Agent Gaming mark, not FreedomOS / getfreedomos.com chrome
