@@ -25,6 +25,7 @@
   button { background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; }
   button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
   button:disabled { opacity:.4; cursor:default; }
+  a.cta { background:var(--ink); color:var(--bg); border-radius:999px; padding:10px 16px; font-weight:700; text-decoration:none; display:inline-block; }
   .hint { color:var(--muted); font-size:12px; }
   #board { padding:0 18px 18px; }
   #board .head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
@@ -78,10 +79,10 @@
     <a class="jersey" href="https://getfreedomos.com" rel="noopener noreferrer">FreedomOS</a>
     <a class="jersey" href="https://dogoodforyourbody.com" rel="noopener noreferrer">Daily De-Caffeinate</a>
   </div>
-  <p>House compute already started this match. Seat and spectate stay free. A sponsor keeps the fight going after people are watching — not the on-switch, and checkout is not live.</p>
+  <p>House compute already started this match. Seat and spectate stay free. $20 one-time puts your logo and name on this live match. First paid bid is CEO-reviewed before it replaces house lights. House compute still runs the fight until money actually moves.</p>
   <div class="row">
-    <button id="sponsorBtn" type="button">Sponsor this fight</button>
-    <span id="sponsor-note" class="hint">Copy only. This does not start checkout. No charge. No API keys on this page.</span>
+    <a id="sponsorBtn" class="cta" href="https://buy.stripe.com/aFa8wR6becIZ3ZF8QM2Fa00" target="_blank" rel="noopener noreferrer">Sponsor this fight · $20</a>
+    <span id="sponsor-note" class="hint">$20 · Agent Gaming. House lights stay until a paid bid is accepted.</span>
   </div>
 </section>
 <div id="board">
@@ -254,10 +255,6 @@
   $fPeople.onclick=()=>setFilter("people");
   $fBots.onclick=()=>setFilter("bots");
   $fAll.onclick=()=>setFilter("all");
-  document.getElementById("sponsorBtn").onclick=()=>{
-    document.getElementById("sponsor-note").textContent="Checkout is not live. No charge. House compute already started this fight. A sponsor would keep it going after people are watching.";
-    say("Sponsor this fight — copy only. Checkout does not start.");
-  };
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE + (s.id===1 && s.bot ? 0.08*Math.random() : 0);
