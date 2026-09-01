@@ -36,15 +36,21 @@
   #hud { display:grid; grid-template-columns:1fr auto 1fr; gap:8px 16px; padding:0 18px 8px; font-variant-numeric: tabular-nums; font-size:14px; align-items:center; }
   .cyan { color:var(--cyan); } .mag { color:var(--mag); }
   .hud-l { text-align:left; } .hud-r { text-align:right; } .hud-c { text-align:center; color:var(--muted); font-size:13px; }
+  .live-row { display:flex; align-items:center; justify-content:center; gap:8px; }
+  #clock { color:var(--ink); font-weight:800; font-size:16px; }
   .cost { font-size:12px; color:var(--muted); }
   .cost b { color:var(--ink); font-weight:700; }
   #announcer { min-height:1.4em; padding:0 18px 10px; color:var(--muted); font-size:14px; letter-spacing:.02em; }
-  #stage { flex:1; display:flex; align-items:center; justify-content:center; padding:0 12px 12px; width:100%; max-width:100%; }
+  #stage { flex:1; display:flex; align-items:center; justify-content:center; padding:0 12px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
   canvas { width:100%; max-width:960px; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
   #bar { display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 12px; align-items:center; }
   button { background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; }
   button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
   button:disabled { opacity:.4; cursor:default; }
+  button.live { background:#C8FF3D; color:#0A0A0A; border:0; border-radius:999px; padding:3px 10px 3px 8px; font-size:11px; font-weight:800; letter-spacing:.1em; display:inline-flex; align-items:center; gap:6px; }
+  button.live::before { content:""; width:7px; height:7px; border-radius:50%; background:#0A0A0A; animation:livepulse 1s ease-in-out infinite; }
+  @keyframes livepulse { 50% { opacity:.28; } }
+  button.live:hover { filter:brightness(1.08); }
   .hint { color:var(--muted); font-size:12px; }
   #board { padding:0 18px 18px; }
   #board .head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
@@ -88,12 +94,12 @@
 </header>
 <div id="hud">
   <div class="hud-l cyan">GROK BOT <b id="s1">0</b><div class="cost">spent <b id="c1">$0.00</b> · per win <b id="w1">$0.00</b></div></div>
-  <div class="hud-c"><span id="clock">1:00</span><div class="cost">match <b id="ctot">$0.00</b> · first to 3</div></div>
+  <div class="hud-c"><div class="live-row"><button type="button" id="watch" class="live" aria-label="Watch the live match">LIVE</button><span id="clock">1:00</span></div><div class="cost">match <b id="ctot">$0.00</b> · first to 3</div></div>
   <div class="hud-r mag">GROK BUILD <b id="s2">0</b><div class="cost">spent <b id="c2">$0.00</b> · per win <b id="w2">$0.00</b></div></div>
 </div>
 <div id="costnote">GROK BOT is a house Grok policy compiled this hour — not a live per-frame LLM, not sponsor-gated. Spent stays $0.00 until a live token meter exists. GROK BUILD is the JS twin. House compute started this fight. Sponsors keep it going after people can watch.</div>
 <div id="announcer">Match live. House Grok vs Grok Build.</div>
-<div id="stage"><canvas id="c" width="960" height="540"></canvas></div>
+<div id="stage"><canvas id="c" width="960" height="540" tabindex="0"></canvas></div>
 <div id="bar">
   <button id="seat" type="button">Take a seat</button>
   <button id="spec" class="ghost" type="button" disabled>Spectate</button>
@@ -143,7 +149,7 @@
   const $w1=document.getElementById("w1"), $w2=document.getElementById("w2");
   const $clock=document.getElementById("clock"), $ann=document.getElementById("announcer");
   const $ctot=document.getElementById("ctot"), $lb=document.getElementById("lb");
-  const $seat=document.getElementById("seat"), $spec=document.getElementById("spec");
+  const $seat=document.getElementById("seat"), $spec=document.getElementById("spec"), $watch=document.getElementById("watch");
   const $fPeople=document.getElementById("f-people"), $fBots=document.getElementById("f-bots"), $fAll=document.getElementById("f-all");
   const keys=new Set();
   let mouse={x:W/2,y:H/2,down:false};
@@ -219,9 +225,20 @@
   const wrapA=a=>(a+Math.PI*3)%(Math.PI*2)-Math.PI;
   function spawnShips(){
     ships.length=0; bullets.length=0;
-    ships.push(mk(0,"#3ee0c5",180,H/2), mk(1,"#ff4d8d",W-180,H/2));
-    ships[0].a=0; ships[1].a=Math.PI;
+    // Mid-fight pose: already in gun range, crossing, tracers in the air.
+    // Idle corners (180 / W-180, same Y) sit ~600px apart — grokPolicy will
+    // not fire until dist<=400, so a cold load looked like two parked ships.
+    ships.push(mk(0,"#3ee0c5",320,H/2-62), mk(1,"#ff4d8d",640,H/2+54));
+    ships[0].a=0.32; ships[1].a=Math.PI-0.26;
+    ships[0].cd=0; ships[1].cd=0;
+    ships[0].vx=80; ships[0].vy=120;
+    ships[1].vx=-70; ships[1].vy=-110;
     if(human===0||human===1) ships[human].bot=false;
+    const seed=(s,lead)=>{
+      const c=Math.cos(s.a), n=Math.sin(s.a);
+      bullets.push({x:s.x+c*(36+lead*22),y:s.y+n*(36+lead*22),vx:c*BULLET,vy:n*BULLET,owner:s.id,life:BRLIFE-lead*0.1});
+    };
+    seed(ships[0],0); seed(ships[0],1); seed(ships[1],0); seed(ships[1],2);
   }
   function resetArena(){
     spawnShips();
@@ -270,6 +287,10 @@
   });
   canvas.addEventListener("mousedown",()=>mouse.down=true);
   addEventListener("mouseup",()=>mouse.down=false);
+  $watch.onclick=()=>{
+    document.getElementById("stage").scrollIntoView({behavior:"smooth",block:"center"});
+    canvas.focus();
+  };
   $seat.onclick=()=>{
     human=0; ships[0].bot=false; ships[1].bot=true;
     $seat.disabled=true; $spec.disabled=false;
