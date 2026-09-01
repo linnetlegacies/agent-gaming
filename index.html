@@ -64,8 +64,8 @@
   .tick-bot { color:var(--desk); font-weight:700; }
   .tick-build { color:var(--lime); font-weight:700; }
   #stage { position:relative; flex:1; display:flex; flex-direction:column; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
-  #rink { position:relative; flex:1; min-width:0; width:100%; }
-  #rink canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
+  #rink { position:relative; flex:1; min-width:0; width:100%; touch-action:none; overscroll-behavior:none; }
+  #rink canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; touch-action:none; overscroll-behavior:none; user-select:none; -webkit-user-select:none; }
   #broadcast { position:absolute; inset:0; pointer-events:none; z-index:2; }
   #rule-rail { position:absolute; top:10px; left:12px; right:248px; text-align:center; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); background:rgba(10,10,10,.78); border:1px solid var(--line); border-radius:999px; padding:5px 12px; }
   #plates { display:flex; justify-content:space-between; gap:10px; margin-top:8px; width:100%; }
@@ -289,6 +289,9 @@
   const hist=[];
   const keys=new Set();
   let mouse={x:W/2,y:H/2,down:false};
+  const stick={active:false,id:null,ox:0,oy:0,x:0,y:0};
+  const aimTouch={active:false,id:null,x:0,y:0};
+  let touchLock=-1e9;
   let human=null, rounds=[0,0], tLeft=ROUND, last=performance.now();
   let freeze=0, ending=false, spent=[0,0], shots=[0,0];
   let shake=0, flashTint=0, flashColor="#fff";
@@ -520,7 +523,7 @@
     $spec.classList.toggle("on", !seated);
     $spec.classList.toggle("ghost", seated);
     $seat.textContent=seated?"You're in":"Take a seat";
-    $desk.textContent=seated?"You're in · WASD / arrows · mouse aim · click or space":"Watching. House Grok vs Grok Build.";
+    $desk.textContent=seated?"You're in · drag the rink or WASD · hold or click to shoot":"Watching. House Grok vs Grok Build. Finger the rink to sit.";
     $n1.textContent=human===0?"YOU · GROK BOT":"GROK BOT";
     $n2.textContent=human===1?"YOU · GROK BUILD":"GROK BUILD";
     $pn1.textContent=$n1.textContent;
@@ -533,14 +536,93 @@
   newMatch("Match live. House Grok vs Grok Build.");
   setFilter("bots");
   syncBooth();
+  function takeSeat(){
+    if(human===0||human===1) return false;
+    human=0; ships[0].bot=false; ships[1].bot=true;
+    board.you=liveYou();
+    saveBoard(board);
+    syncBooth();
+    setFilter("people");
+    say("You're in. Same fight.");
+    canvas.focus();
+    renderLb();
+    return true;
+  }
+  function canvasXY(t){
+    const r=canvas.getBoundingClientRect();
+    return {x:(t.clientX-r.left)*W/r.width, y:(t.clientY-r.top)*H/r.height};
+  }
+  function markTouch(){ touchLock=performance.now(); }
+  function fromTouch(){ return performance.now()-touchLock<700; }
+  function phoneRink(){
+    return matchMedia("(pointer: coarse)").matches || matchMedia("(max-width: 640px)").matches;
+  }
+  function lockScroll(on){
+    if(!phoneRink()) return;
+    document.documentElement.style.overflow=on?"hidden":"";
+    document.body.style.overflow=on?"hidden":"";
+  }
+  function bindStick(id,p){
+    stick.active=true; stick.id=id; stick.ox=p.x; stick.oy=p.y; stick.x=p.x; stick.y=p.y;
+    lockScroll(true);
+  }
+  function bindAim(id,p){
+    aimTouch.active=true; aimTouch.id=id; aimTouch.x=p.x; aimTouch.y=p.y;
+  }
+  function onCanvasDown(p, id){
+    takeSeat();
+    if(!stick.active) bindStick(id,p);
+    else if(!aimTouch.active && id!==stick.id) bindAim(id,p);
+  }
+  function onCanvasMove(p, id){
+    if(stick.active && id===stick.id){ stick.x=p.x; stick.y=p.y; }
+    if(aimTouch.active && id===aimTouch.id){ aimTouch.x=p.x; aimTouch.y=p.y; }
+  }
+  function onCanvasUp(id){
+    if(stick.active && id===stick.id){ stick.active=false; stick.id=null; lockScroll(false); }
+    if(aimTouch.active && id===aimTouch.id){ aimTouch.active=false; aimTouch.id=null; }
+  }
   addEventListener("keydown",e=>{ keys.add(e.key.toLowerCase()); if(e.code==="Space") e.preventDefault(); });
   addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
   canvas.addEventListener("mousemove",e=>{
-    const r=canvas.getBoundingClientRect();
-    mouse.x=(e.clientX-r.left)*W/r.width; mouse.y=(e.clientY-r.top)*H/r.height;
+    if(fromTouch()) return;
+    if(phoneRink() && stick.active && stick.id==="mouse") e.preventDefault();
+    const p=canvasXY(e);
+    mouse.x=p.x; mouse.y=p.y;
+    if(phoneRink() && stick.active && stick.id==="mouse") onCanvasMove(p,"mouse");
   });
-  canvas.addEventListener("mousedown",()=>mouse.down=true);
-  addEventListener("mouseup",()=>mouse.down=false);
+  canvas.addEventListener("mousedown",e=>{
+    if(fromTouch()) return;
+    if(phoneRink()) e.preventDefault();
+    mouse.down=true;
+    const p=canvasXY(e);
+    mouse.x=p.x; mouse.y=p.y;
+    takeSeat();
+    if(phoneRink() && !stick.active) bindStick("mouse",p);
+  });
+  addEventListener("mouseup",()=>{
+    if(fromTouch()) return;
+    mouse.down=false;
+    if(stick.id==="mouse") onCanvasUp("mouse");
+  });
+  canvas.addEventListener("touchstart",e=>{
+    e.preventDefault();
+    markTouch();
+    for(const t of e.changedTouches) onCanvasDown(canvasXY(t), t.identifier);
+  }, {passive:false});
+  canvas.addEventListener("touchmove",e=>{
+    e.preventDefault();
+    markTouch();
+    for(const t of e.changedTouches) onCanvasMove(canvasXY(t), t.identifier);
+  }, {passive:false});
+  const endTouch=e=>{
+    e.preventDefault();
+    markTouch();
+    for(const t of e.changedTouches) onCanvasUp(t.identifier);
+  };
+  canvas.addEventListener("touchend", endTouch, {passive:false});
+  canvas.addEventListener("touchcancel", endTouch, {passive:false});
+  addEventListener("touchmove",e=>{ if(stick.active) e.preventDefault(); }, {passive:false});
   $watch.onclick=()=>{
     document.getElementById("stage").scrollIntoView({behavior:"smooth",block:"center"});
     canvas.focus();
@@ -587,21 +669,15 @@
     copyLive();
   }
   $share.addEventListener("click", shareFight);
-  $seat.onclick=()=>{
-    if(human===0||human===1) return;
-    human=0; ships[0].bot=false; ships[1].bot=true;
-    board.you=liveYou();
-    saveBoard(board);
-    syncBooth();
-    setFilter("people");
-    say("You're in. Same fight.");
-    canvas.focus();
-    renderLb();
-  };
+  $seat.onclick=()=>takeSeat();
   $spec.onclick=()=>{
     if(human==null) return;
     if(human===0||human===1){ board.you=liveYou(); saveBoard(board); }
     human=null; ships.forEach(s=>s.bot=true);
+    stick.active=false; stick.id=null;
+    aimTouch.active=false; aimTouch.id=null;
+    mouse.down=false;
+    lockScroll(false);
     syncBooth();
     say("Watching. House Grok vs Grok Build.");
     renderLb();
@@ -861,10 +937,21 @@
     if(keys.has("s")||keys.has("arrowdown")) my+=1;
     if(keys.has("a")||keys.has("arrowleft")) mx-=1;
     if(keys.has("d")||keys.has("arrowright")) mx+=1;
+    let stickAim=false;
+    if(stick.active){
+      const dx=stick.x-stick.ox, dy=stick.y-stick.oy, mag=Math.hypot(dx,dy);
+      if(mag>22){
+        mx+=dx/mag;
+        my+=dy/mag;
+        stickAim=true;
+        s.a=Math.atan2(dy,dx);
+      }
+    }
     const n=Math.hypot(mx,my)||1;
     s.vx=(mx/n)*SPEED; s.vy=(my/n)*SPEED;
-    s.a=Math.atan2(mouse.y-s.y, mouse.x-s.x);
-    if(mouse.down||keys.has(" ")||keys.has("space")) fire(s);
+    if(aimTouch.active) s.a=Math.atan2(aimTouch.y-s.y, aimTouch.x-s.x);
+    else if(!stickAim) s.a=Math.atan2(mouse.y-s.y, mouse.x-s.x);
+    if(mouse.down||stick.active||aimTouch.active||keys.has(" ")||keys.has("space")) fire(s);
   }
   function nextMatchLine(){
     return human==null ? "Next match. House Grok vs Grok Build." : "Next match. You're still in.";
@@ -1012,6 +1099,15 @@
       ctx.fillStyle=flashColor;
       ctx.globalAlpha=flashTint*0.42;
       ctx.fillRect(0,0,W,H);
+      ctx.globalAlpha=1;
+    }
+    if(stick.active && (human===0||human===1)){
+      ctx.strokeStyle="#00E5FF";
+      ctx.globalAlpha=0.55;
+      ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(stick.ox,stick.oy,28,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(stick.x,stick.y,10,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(stick.ox,stick.oy); ctx.lineTo(stick.x,stick.y); ctx.stroke();
       ctx.globalAlpha=1;
     }
     ctx.restore();
