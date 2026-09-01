@@ -730,6 +730,8 @@
   if(paidReturn() && !$plate.classList.contains("is-live")){
     markBidReceived();
     sting("BID RECEIVED","lime");
+    clearTimeout(sting.tid);
+    sting.tid=setTimeout(()=>{ $sting.hidden=true; $sting.textContent=""; $sting.className=""; }, 2200);
     say("Bid received. Jersey lands on this fight.");
     tick("Bid received. Jersey lands on this fight.");
   }
