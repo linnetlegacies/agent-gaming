@@ -99,7 +99,8 @@
   .ghost-dash { color:var(--muted); opacity:.5; font-size:20px; font-weight:800; letter-spacing:.28em; padding-left:.28em; }
   .ghost-offer { margin:6px 0 0; font-size:11px; font-weight:800; letter-spacing:.04em; color:var(--lime); }
   .ghost-empty { margin:3px 0 0; font-size:10px; color:var(--muted); }
-  .ghost-plate.is-live .ghost-offer, .ghost-plate.is-live .ghost-empty { display:none; }
+  .ghost-plate.is-live .ghost-empty { display:none; }
+  .ghost-plate.is-live .ghost-offer { color:var(--lime); }
   .ghost-plate.is-pending { border-style:solid; border-color:var(--lime); }
   .ghost-plate.is-pending .ghost-empty { color:var(--lime); font-weight:800; }
   .ghost-plate.is-live .ghost-jersey { border-style:solid; border-color:var(--desk); gap:8px; padding:6px 8px; color:var(--ink); }
@@ -144,6 +145,7 @@
   #jerseys .label { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
   .jersey { color:var(--ink); text-decoration:none; border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-size:13px; font-weight:700; }
   .jersey:hover { border-color:var(--muted); }
+  .jersey-light { font-size:12px; font-weight:800; letter-spacing:.02em; color:var(--lime); font-variant-numeric:tabular-nums; }
   footer { padding:8px 18px 18px; color:var(--muted); font-size:12px; }
   footer a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
 </style>
@@ -166,7 +168,7 @@
 </div>
 <div id="stakes" aria-label="Round stakes">
   <div class="stakes-row">
-    <div id="stakes-now">This round · first to 3 · <b>0–0</b> · leaders house <b>$0.00</b></div>
+    <div id="stakes-now">This round · first to 3 · <b>0–0</b> · Light <b>$20.00</b> · leaders house <b>$0.00</b></div>
     <button type="button" id="share" class="ghost share">Share this fight</button>
   </div>
   <div class="last">
@@ -179,17 +181,20 @@
   </div>
 </div>
 <div id="toast" hidden role="status" aria-live="polite">Link copied. Send it.</div>
-<div id="costnote">GROK BOT is a house Grok policy compiled this hour — not a live per-frame LLM, not sponsor-gated. Spent stays $0.00 until a live token meter exists. GROK BUILD is the JS twin. House compute started this fight. Sponsors keep it going after people can watch.</div>
+<div id="costnote">GROK BOT is a house Grok policy compiled this hour — not a live per-frame LLM, not sponsor-gated. Spent stays $0.00 until a live token meter exists. GROK BUILD is the JS twin. House compute started this fight. Paid Light on this fight is $20.00 — jersey money, not token burn.</div>
 <div id="announcer">Match live. House Grok vs Grok Build.</div>
 <div id="ticker" role="log" aria-live="polite" aria-label="Fight ticker">
   <div class="head"><span class="mark">Ticker</span><span id="ticker-score">0–0 first to 3</span></div>
   <ol id="ticks"></ol>
 </div>
 <div id="stage">
-  <aside id="fight-sponsor" class="ghost-plate" data-empty="true" role="button" tabindex="0" aria-label="Sponsor this fight, $20">
+  <aside id="fight-sponsor" class="ghost-plate is-live" data-empty="false" aria-label="This fight sponsored by FreedomOS">
     <p class="ghost-kicker">This fight sponsored by</p>
-    <div id="ghost-jersey" class="ghost-jersey"><span class="ghost-dash" aria-hidden="true">___</span></div>
-    <p class="ghost-offer">$20 · this fight</p>
+    <div id="ghost-jersey" class="ghost-jersey">
+      <img src="https://getfreedomos.com/logo/f/f-logo-64x64.png" alt="" width="28" height="28"/>
+      <a class="ghost-name" href="https://getfreedomos.com" target="_blank" rel="noopener noreferrer">FreedomOS</a>
+    </div>
+    <p class="ghost-offer" id="ghost-light">$20.00 · paid Light · this fight</p>
     <p class="ghost-empty">No bid yet — be the first</p>
   </aside>
   <div id="rink">
@@ -222,6 +227,7 @@
   <div id="jerseys" aria-label="This fight and house light">
     <span class="label">This fight</span>
     <a class="jersey" href="https://getfreedomos.com" rel="noopener noreferrer">FreedomOS</a>
+    <span class="jersey-light">$20.00 · paid Light</span>
     <span class="label">House light</span>
     <a class="jersey" href="https://dogoodforyourbody.com" rel="noopener noreferrer">Daily De-Caffeinate</a>
   </div>
@@ -277,16 +283,20 @@
   const $fPeople=document.getElementById("f-people"), $fBots=document.getElementById("f-bots"), $fAll=document.getElementById("f-all");
   const $stakesNow=document.getElementById("stakes-now"), $hist=document.getElementById("stakes-hist");
   const $share=document.getElementById("share"), $toast=document.getElementById("toast");
+  const $ghostLight=document.getElementById("ghost-light");
   const LIVE_URL="https://agentgaming.app";
+  const LIGHT_SKU=20;
   const hist=[];
   const keys=new Set();
   let mouse={x:W/2,y:H/2,down:false};
   let human=null, rounds=[0,0], tLeft=ROUND, last=performance.now();
   let freeze=0, ending=false, spent=[0,0], shots=[0,0];
   let shake=0, flashTint=0, flashColor="#fff";
+  let fightLight=LIGHT_SKU;
   const impacts=[];
   const money=n=>"$"+n.toFixed(3);
   const money0="$0.00";
+  const money2=n=>"$"+Number(n).toFixed(2);
   const perWin=(side)=> rounds[side] ? money(spent[side]/rounds[side]) : "—";
   const say=s=>{ $ann.textContent=s; };
   function sting(msg, cls){
@@ -343,7 +353,8 @@
   }
   function paintStakes(){
     const you=liveYou();
-    let line="This round · first to "+TO+" · <b>"+scoreNow()+"</b> · leaders house <b>"+money0+"</b>";
+    const light=fightLight>0 ? " · Light <b>"+money2(fightLight)+"</b>" : "";
+    let line="This round · first to "+TO+" · <b>"+scoreNow()+"</b>"+light+" · leaders house <b>"+money0+"</b>";
     if(human===0||human===1){
       const cpw=rounds[human]?money(spent[human]/rounds[human]):"—";
       line+=" · you <b>"+cpw+"</b>";
@@ -499,7 +510,7 @@
     if(you) board.you=you;
     const sig=filter+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+board.botWins.join(",")+"|"+rounds.join(",");
     if(sig!==hud.lbSig){ hud.lbSig=sig; renderLb(); }
-    const stakesSig=firstTo()+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+hist.length+"|"+(human==null?"h":"s");
+    const stakesSig=firstTo()+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+hist.length+"|"+(human==null?"h":"s")+"|"+fightLight;
     if(stakesSig!==hud.stakesSig){ hud.stakesSig=stakesSig; paintStakes(); }
     paintPlates();
   }
@@ -657,12 +668,22 @@
     s.textContent=text;
     return s;
   }
+  function jerseyLight(n){
+    const s=document.createElement("span");
+    s.className="jersey-light";
+    s.textContent=money2(n)+" · paid Light";
+    return s;
+  }
+  function paintLightLine(paid){
+    if($ghostLight) $ghostLight.textContent=paid && fightLight>0 ? money2(fightLight)+" · paid Light · this fight" : "$20 · this fight";
+  }
   function paintJerseys(paidName, paidUrl){
     $jerseys.replaceChildren();
     if(paidName){
       $jerseys.setAttribute("aria-label","This fight and house light");
       $jerseys.appendChild(jerseyLabel("This fight"));
       $jerseys.appendChild(jerseyChip(paidUrl||"https://getfreedomos.com", paidName));
+      if(fightLight>0) $jerseys.appendChild(jerseyLight(fightLight));
       $jerseys.appendChild(jerseyLabel("House light"));
       $jerseys.appendChild(jerseyChip(HOUSE_LIGHT_URL, HOUSE_LIGHT_NAME));
       return;
@@ -708,6 +729,8 @@
     $plate.setAttribute("role","button");
     $plate.tabIndex=0;
     $plate.setAttribute("aria-label","Sponsor this fight, $20");
+    fightLight=0;
+    paintLightLine(false);
     if(paidReturn()) markBidReceived();
     else {
       $plate.classList.remove("is-pending");
@@ -716,6 +739,7 @@
       if($sponsorNote) $sponsorNote.textContent="Your URL or @handle is the bid. Stripe takes the card. A paid, pledge-clean bid lands on this fight. Seat and spectate stay free. House lights stay until a paid bid lands.";
     }
     paintJerseys("", "");
+    paintStakes();
   }
   function setFightSponsor(s){
     const name=s && typeof s.name==="string" ? s.name.trim().slice(0,80) : "";
@@ -743,8 +767,12 @@
     $plate.removeAttribute("role");
     $plate.removeAttribute("tabindex");
     $plate.setAttribute("aria-label","This fight sponsored by "+(name||"Sponsor"));
+    const lightN=s && Number(s.light);
+    fightLight=(Number.isFinite(lightN) && lightN>0) ? lightN : LIGHT_SKU;
+    paintLightLine(true);
     if($sponsorNote) $sponsorNote.textContent="This fight is named by "+(name||"FreedomOS")+". Seat and spectate stay free. Your URL or @handle is the next bid. Stripe takes the card. A paid, pledge-clean bid takes the plate.";
     paintJerseys(name||"FreedomOS", url||"https://getfreedomos.com");
+    paintStakes();
   }
   function openBidField(){
     $bid.scrollIntoView({behavior:"smooth",block:"center"});
@@ -761,9 +789,9 @@
     e.preventDefault();
     openBidField();
   });
-  paintGhost();
-  window.AG_FIGHT_SPONSOR={name:"FreedomOS",url:"https://getfreedomos.com",logo:"https://getfreedomos.com/logo/f/f-logo-64x64.png"};
+  window.AG_FIGHT_SPONSOR={name:"FreedomOS",url:"https://getfreedomos.com",logo:"https://getfreedomos.com/logo/f/f-logo-64x64.png",light:20};
   if(window.AG_FIGHT_SPONSOR) setFightSponsor(window.AG_FIGHT_SPONSOR);
+  else paintGhost();
   window.AG_setFightSponsor=setFightSponsor;
   if(paidReturn() && !$plate.classList.contains("is-live")){
     markBidReceived();
