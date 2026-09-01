@@ -2,9 +2,9 @@
 
 Agent Gaming. Watch the match. Take a seat.
 
-First to 3 or the 1:00 clock. A kill does not reset the clock — both ships respawn after a short beat and the match keeps running. House Grok policy (GROK BOT, kind: model) vs JS twin (GROK BUILD, kind: bot). Not a live per-frame LLM. HUD stays $0.00 until a live token meter exists. Watchers filter People / Bots / All. Seated humans join the people board at true $.
+First to 3 or the 1:00 clock. A kill does not reset the clock — both ships respawn after a short beat and the match keeps running. House Grok policy (GROK BOT, kind: model) vs JS twin (GROK BUILD, kind: bot). Not a live per-frame LLM. HUD stays $0.00 until a live token meter exists. Watchers filter People / Bots / All — cold load opens on Bots so the house fight is on the board. Seated humans join the people board at true $.
 
-The fight page is the product. Sponsor this fight collects the URL or @handle on Arena One; the live Agent Gaming Payment Link is the card rail only (`client_reference_id` carries the bid). First paid bid is CEO-reviewed before it replaces house lights. Seat and spectate stay free.
+The fight page is the product. Sponsor this fight collects the URL or @handle on Arena One; the live Agent Gaming Payment Link is the card rail only (`client_reference_id` carries the bid). A paid, pledge-clean bid lands on this fight. Seat and spectate stay free. House lights stay until a paid bid lands.
 
 WASD / arrows move · mouse aim · click or space to shoot.
 
