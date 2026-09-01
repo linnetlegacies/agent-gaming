@@ -50,8 +50,20 @@
   .tick .clk { flex:0 0 2.6em; font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted); }
   .tick-bot { color:var(--desk); font-weight:700; }
   .tick-build { color:var(--lime); font-weight:700; }
-  #stage { flex:1; display:flex; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
+  #stage { position:relative; flex:1; display:flex; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
   canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; }
+  .ghost-plate { position:absolute; top:18px; right:18px; z-index:2; min-width:156px; max-width:min(228px,46%); padding:8px 10px 9px; background:rgba(10,10,10,.78); border:1px dashed var(--desk); border-radius:8px; pointer-events:none; }
+  .ghost-plate.is-live { border-style:solid; border-color:var(--lime); pointer-events:auto; }
+  .ghost-kicker { margin:0 0 6px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--lime); }
+  .ghost-jersey { display:flex; align-items:center; justify-content:center; min-height:38px; border:1px dashed var(--line); border-radius:6px; color:var(--muted); text-decoration:none; }
+  .ghost-dash { color:var(--muted); opacity:.5; font-size:20px; font-weight:800; letter-spacing:.28em; padding-left:.28em; }
+  .ghost-plate.is-live .ghost-jersey { border-style:solid; border-color:var(--desk); gap:8px; padding:6px 8px; color:var(--ink); }
+  .ghost-name { font-size:13px; font-weight:800; letter-spacing:.04em; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:11em; }
+  .ghost-plate img { width:28px; height:28px; object-fit:contain; background:#000; border-radius:4px; flex-shrink:0; }
+  @media (max-width:640px){
+    #stage { flex-direction:column; align-items:stretch; }
+    .ghost-plate { position:static; max-width:none; width:100%; margin:0 0 8px; pointer-events:auto; }
+  }
   #bar { display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 12px; align-items:center; }
   button { background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; }
   button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
@@ -113,7 +125,13 @@
   <div class="head"><span class="mark">Ticker</span><span id="ticker-score">0–0 first to 3</span></div>
   <ol id="ticks"></ol>
 </div>
-<div id="stage"><canvas id="c" width="960" height="540" tabindex="0"></canvas></div>
+<div id="stage">
+  <aside id="fight-sponsor" class="ghost-plate" data-empty="true" aria-label="This fight sponsored by">
+    <p class="ghost-kicker">This fight sponsored by</p>
+    <div id="ghost-jersey" class="ghost-jersey"><span class="ghost-dash" aria-hidden="true">___</span></div>
+  </aside>
+  <canvas id="c" width="960" height="540" tabindex="0"></canvas>
+</div>
 <div id="bar">
   <button id="seat" type="button" aria-pressed="false">Take a seat</button>
   <button id="spec" class="on" type="button" aria-pressed="true">Spectate</button>
@@ -375,6 +393,57 @@
   });
   $cta.addEventListener("click", openCardRail);
   syncSponsor();
+  const $plate=document.getElementById("fight-sponsor");
+  const $jersey=document.getElementById("ghost-jersey");
+  const safeHttp=u=>{
+    try {
+      const x=new URL(String(u||""), location.href);
+      if(x.protocol==="https:"||x.protocol==="http:") return x.href;
+    } catch(e){}
+    return "";
+  };
+  const safeHttps=u=>{
+    try {
+      const x=new URL(String(u||""), location.href);
+      if(x.protocol==="https:") return x.href;
+    } catch(e){}
+    return "";
+  };
+  function paintGhost(){
+    $jersey.replaceChildren();
+    const dash=document.createElement("span");
+    dash.className="ghost-dash";
+    dash.setAttribute("aria-hidden","true");
+    dash.textContent="___";
+    $jersey.appendChild(dash);
+    $plate.classList.remove("is-live");
+    $plate.dataset.empty="true";
+  }
+  function setFightSponsor(s){
+    const name=s && typeof s.name==="string" ? s.name.trim().slice(0,80) : "";
+    const logo=s ? safeHttps(s.logo) : "";
+    const url=s ? safeHttp(s.url) : "";
+    if(!name && !logo){ paintGhost(); return; }
+    $jersey.replaceChildren();
+    if(logo){
+      const img=document.createElement("img");
+      img.src=logo;
+      img.alt="";
+      img.width=28;
+      img.height=28;
+      $jersey.appendChild(img);
+    }
+    const label=document.createElement(url?"a":"span");
+    label.className="ghost-name";
+    label.textContent=name || "Sponsor";
+    if(url){ label.href=url; label.target="_blank"; label.rel="noopener noreferrer"; }
+    $jersey.appendChild(label);
+    $plate.classList.add("is-live");
+    $plate.dataset.empty="false";
+  }
+  paintGhost();
+  if(window.AG_FIGHT_SPONSOR) setFightSponsor(window.AG_FIGHT_SPONSOR);
+  window.AG_setFightSponsor=setFightSponsor;
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE + (s.id===1 && s.bot ? 0.08*Math.random() : 0);
