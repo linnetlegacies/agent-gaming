@@ -219,12 +219,13 @@
 </div>
 <section id="sponsor">
   <h2>Sponsor this fight</h2>
-  <div id="jerseys" aria-label="House lights">
-    <span class="label">House lights</span>
+  <div id="jerseys" aria-label="This fight and house light">
+    <span class="label">This fight</span>
     <a class="jersey" href="https://getfreedomos.com" rel="noopener noreferrer">FreedomOS</a>
+    <span class="label">House light</span>
     <a class="jersey" href="https://dogoodforyourbody.com" rel="noopener noreferrer">Daily De-Caffeinate</a>
   </div>
-  <p id="sponsor-note" class="hint">Your URL or @handle is the bid. Stripe takes the card. A paid, pledge-clean bid lands on this fight. Seat and spectate stay free. House lights stay until a paid bid lands.</p>
+  <p id="sponsor-note" class="hint">This fight is named by FreedomOS. Seat and spectate stay free. Your URL or @handle is the next bid. Stripe takes the card. A paid, pledge-clean bid takes the plate.</p>
   <div class="row bid-row">
     <label class="bid-field" for="sponsorProduct">
       <svg class="globe" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -639,6 +640,38 @@
   const RETURN_KEY="ag-light-return";
   const $ghostEmpty=$plate.querySelector(".ghost-empty");
   const $sponsorNote=document.getElementById("sponsor-note");
+  const $jerseys=document.getElementById("jerseys");
+  const HOUSE_LIGHT_URL="https://dogoodforyourbody.com";
+  const HOUSE_LIGHT_NAME="Daily De-Caffeinate";
+  function jerseyChip(href, text){
+    const a=document.createElement("a");
+    a.className="jersey";
+    a.href=href;
+    a.rel="noopener noreferrer";
+    a.textContent=text;
+    return a;
+  }
+  function jerseyLabel(text){
+    const s=document.createElement("span");
+    s.className="label";
+    s.textContent=text;
+    return s;
+  }
+  function paintJerseys(paidName, paidUrl){
+    $jerseys.replaceChildren();
+    if(paidName){
+      $jerseys.setAttribute("aria-label","This fight and house light");
+      $jerseys.appendChild(jerseyLabel("This fight"));
+      $jerseys.appendChild(jerseyChip(paidUrl||"https://getfreedomos.com", paidName));
+      $jerseys.appendChild(jerseyLabel("House light"));
+      $jerseys.appendChild(jerseyChip(HOUSE_LIGHT_URL, HOUSE_LIGHT_NAME));
+      return;
+    }
+    $jerseys.setAttribute("aria-label","House lights");
+    $jerseys.appendChild(jerseyLabel("House lights"));
+    $jerseys.appendChild(jerseyChip("https://getfreedomos.com","FreedomOS"));
+    $jerseys.appendChild(jerseyChip(HOUSE_LIGHT_URL, HOUSE_LIGHT_NAME));
+  }
   function paidReturn(){
     const q=new URLSearchParams(location.search);
     const light=q.get("light")==="1";
@@ -680,7 +713,9 @@
       $plate.classList.remove("is-pending");
       $plate.removeAttribute("data-return");
       if($ghostEmpty) $ghostEmpty.textContent="No bid yet — be the first";
+      if($sponsorNote) $sponsorNote.textContent="Your URL or @handle is the bid. Stripe takes the card. A paid, pledge-clean bid lands on this fight. Seat and spectate stay free. House lights stay until a paid bid lands.";
     }
+    paintJerseys("", "");
   }
   function setFightSponsor(s){
     const name=s && typeof s.name==="string" ? s.name.trim().slice(0,80) : "";
@@ -708,6 +743,8 @@
     $plate.removeAttribute("role");
     $plate.removeAttribute("tabindex");
     $plate.setAttribute("aria-label","This fight sponsored by "+(name||"Sponsor"));
+    if($sponsorNote) $sponsorNote.textContent="This fight is named by "+(name||"FreedomOS")+". Seat and spectate stay free. Your URL or @handle is the next bid. Stripe takes the card. A paid, pledge-clean bid takes the plate.";
+    paintJerseys(name||"FreedomOS", url||"https://getfreedomos.com");
   }
   function openBidField(){
     $bid.scrollIntoView({behavior:"smooth",block:"center"});
