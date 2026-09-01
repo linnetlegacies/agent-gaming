@@ -45,7 +45,6 @@
   button { background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; }
   button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
   button:disabled { opacity:.4; cursor:default; }
-  a.cta { background:var(--ink); color:var(--bg); border-radius:999px; padding:10px 16px; font-weight:700; text-decoration:none; display:inline-block; }
   .hint { color:var(--muted); font-size:12px; }
   #board { padding:0 18px 18px; }
   #board .head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
@@ -63,6 +62,11 @@
   #sponsor p { margin:0 0 10px; color:var(--muted); font-size:13px; max-width:42rem; line-height:1.45; }
   #sponsor-note { min-height:1.3em; }
   #sponsor .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  #sponsor .bid-row { display:flex; gap:10px; flex-wrap:wrap; align-items:stretch; max-width:960px; }
+  .bid-field { display:flex; align-items:center; gap:8px; flex:1 1 280px; min-width:min(100%, 240px); background:transparent; border:1px solid var(--line); border-radius:999px; padding:8px 14px; }
+  .bid-field .globe { width:16px; height:16px; flex-shrink:0; color:var(--muted); }
+  .bid-field input { flex:1; min-width:0; background:transparent; border:0; outline:0; color:var(--ink); font:inherit; font-size:14px; }
+  .bid-field input::placeholder { color:var(--muted); }
   #jerseys { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 12px; }
   #jerseys .label { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
   .jersey { color:var(--ink); text-decoration:none; border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-size:13px; font-weight:700; }
@@ -102,10 +106,16 @@
     <a class="jersey" href="https://getfreedomos.com" rel="noopener noreferrer">FreedomOS</a>
     <a class="jersey" href="https://dogoodforyourbody.com" rel="noopener noreferrer">Daily De-Caffeinate</a>
   </div>
-  <p>House compute already started this match. Seat and spectate stay free. $20 one-time puts your logo and name on this live match. First paid bid is CEO-reviewed before it replaces house lights. House compute still runs the fight until money actually moves.</p>
-  <div class="row">
-    <a id="sponsorBtn" class="cta" href="https://buy.stripe.com/aFa8wR6becIZ3ZF8QM2Fa00" target="_blank" rel="noopener noreferrer">Sponsor this fight · $20</a>
-    <span id="sponsor-note" class="hint">$20 · Agent Gaming. House lights stay until a paid bid is accepted.</span>
+  <p id="sponsor-note" class="hint">Your URL or @handle is the bid. Stripe takes the card. First paid bid is CEO-reviewed before it replaces house lights. Seat and spectate stay free.</p>
+  <div class="row bid-row">
+    <label class="bid-field" for="sponsorProduct">
+      <svg class="globe" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M3 12h18M12 3c2.6 3 4 6 4 9s-1.4 6-4 9M12 3c-2.6 3-4 6-4 9s1.4 6 4 9"/>
+      </svg>
+      <input id="sponsorProduct" type="text" placeholder="Your product URL or @handle" aria-label="Your product URL or @handle" autocomplete="url" inputmode="url" maxlength="240" required/>
+    </label>
+    <button id="sponsorBtn" type="button" disabled>Sponsor this fight · $20</button>
   </div>
 </section>
 <div id="board">
@@ -278,6 +288,24 @@
   $fPeople.onclick=()=>setFilter("people");
   $fBots.onclick=()=>setFilter("bots");
   $fAll.onclick=()=>setFilter("all");
+  const PAY_LINK="https://buy.stripe.com/aFa8wR6becIZ3ZF8QM2Fa00";
+  const $bid=document.getElementById("sponsorProduct");
+  const $cta=document.getElementById("sponsorBtn");
+  const sanitizeBid=raw=>String(raw).trim().replace(/[:/.@]/g,"-").replace(/[^A-Za-z0-9_-]/g,"").slice(0,200);
+  function syncSponsor(){ $cta.disabled=sanitizeBid($bid.value).length===0; }
+  function openCardRail(){
+    const id=sanitizeBid($bid.value);
+    if(!id) return;
+    window.open(PAY_LINK+"?client_reference_id="+encodeURIComponent(id), "_blank", "noopener,noreferrer");
+  }
+  $bid.addEventListener("input", syncSponsor);
+  $bid.addEventListener("keydown", e=>{
+    if(e.key!=="Enter") return;
+    e.preventDefault();
+    openCardRail();
+  });
+  $cta.addEventListener("click", openCardRail);
+  syncSponsor();
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE + (s.id===1 && s.bot ? 0.08*Math.random() : 0);
