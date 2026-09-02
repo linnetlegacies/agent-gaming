@@ -54,7 +54,8 @@
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30; background:var(--lime); color:var(--bg); font-weight:800; font-size:13px; padding:8px 16px; border-radius:999px; pointer-events:none; }
   #toast[hidden] { display:none; }
   #announcer { min-height:1.4em; padding:0 18px 8px; color:var(--muted); font-size:14px; letter-spacing:.02em; }
-  #ticker { margin:8px 18px 10px; border:1px solid var(--line); border-left:3px solid var(--lime); background:#0b0e16; border-radius:0 8px 8px 0; padding:6px 10px 5px; }
+  .rink-frame { position:relative; width:100%; }
+  #ticker { position:absolute; left:6px; right:6px; bottom:6px; z-index:3; margin:0; pointer-events:none; border:1px solid var(--line); border-left:3px solid var(--lime); background:rgba(10,10,10,.88); border-radius:0 8px 8px 0; padding:6px 10px 5px; }
   #desk-call { display:flex; align-items:baseline; gap:8px; min-height:1.45em; margin-bottom:3px; }
   #desk-kind { flex:0 0 auto; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--bg); background:var(--desk); padding:2px 7px; border-radius:4px; animation:kindPop .16s ease-out; }
   #desk-kind.k-hit { background:#fff; }
@@ -76,12 +77,13 @@
   @keyframes kindPop { from { transform:scale(1.12); } to { transform:scale(1); } }
   @keyframes tickIn { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:none; } }
   @media (max-width:640px){
-    #ticker { margin:6px 8px 8px; }
+    #ticker { margin:0; left:4px; right:4px; bottom:4px; }
     #desk-line, .tick { font-size:11px; }
     .tick .k { letter-spacing:.06em; }
+    #ticks .tick:nth-child(n+3) { display:none; }
   }
   #stage { position:relative; flex:1; display:flex; flex-direction:column; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
-  #rink { position:relative; flex:1; min-width:0; width:100%; touch-action:none; overscroll-behavior:none; }
+  #rink { position:relative; flex:0 1 auto; min-width:0; width:100%; touch-action:none; overscroll-behavior:none; }
   #rink canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; touch-action:none; overscroll-behavior:none; user-select:none; -webkit-user-select:none; }
   #broadcast { position:absolute; inset:0; pointer-events:none; z-index:2; }
   #rule-rail { position:absolute; top:10px; left:12px; right:248px; text-align:center; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); background:rgba(10,10,10,.78); border:1px solid var(--line); border-radius:999px; padding:5px 12px; }
@@ -211,10 +213,19 @@
     <p class="ghost-empty">No bid yet — be the first</p>
   </aside>
   <div id="rink">
-    <canvas id="c" width="960" height="540" tabindex="0"></canvas>
-    <div id="broadcast" aria-hidden="true">
-      <div id="rule-rail">SHOOT · DODGE · DROP THEM — FIRST TO 3</div>
-      <p id="sting" hidden></p>
+    <div class="rink-frame">
+      <canvas id="c" width="960" height="540" tabindex="0"></canvas>
+      <div id="broadcast" aria-hidden="true">
+        <div id="rule-rail">SHOOT · DODGE · DROP THEM — FIRST TO 3</div>
+        <p id="sting" hidden></p>
+      </div>
+      <div id="ticker" role="log" aria-live="polite" aria-label="Fight desk">
+        <div id="desk-call">
+          <span class="kind k-live" id="desk-kind">LIVE</span>
+          <span id="desk-line">Round live · 0–0 first to 3</span>
+        </div>
+        <ol id="ticks"></ol>
+      </div>
     </div>
   </div>
   <div id="plates" aria-label="Fighter life">
@@ -229,13 +240,6 @@
       <div class="plate-hp"><span id="life2">8</span> HP</div>
     </div>
   </div>
-</div>
-<div id="ticker" role="log" aria-live="polite" aria-label="Fight desk">
-  <div id="desk-call">
-    <span class="kind k-live" id="desk-kind">LIVE</span>
-    <span id="desk-line">Round live · 0–0 first to 3</span>
-  </div>
-  <ol id="ticks"></ol>
 </div>
 <div id="bar">
   <button id="seat" type="button" aria-pressed="false">Take a seat</button>
@@ -1173,7 +1177,7 @@
       else if(s.id===0) grokPolicy(s, foe(1), incoming, dt);
       else bot(s, foe(0), dt);
       s.x=Math.max(R+8, Math.min(W-R-8, s.x+s.vx*dt));
-      s.y=Math.max(R+24, Math.min(H-R-40, s.y+s.vy*dt));
+      s.y=Math.max(R+24, Math.min(H-R-78, s.y+s.vy*dt));
     }
     for(const b of bullets){ b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt; }
     for(const b of bullets){
