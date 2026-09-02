@@ -54,17 +54,36 @@
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30; background:var(--lime); color:var(--bg); font-weight:800; font-size:13px; padding:8px 16px; border-radius:999px; pointer-events:none; }
   #toast[hidden] { display:none; }
   #announcer { min-height:1.4em; padding:0 18px 8px; color:var(--muted); font-size:14px; letter-spacing:.02em; }
-  #ticker { margin:0 18px 10px; border:1px solid var(--line); border-left:3px solid var(--lime); background:#0b0e16; border-radius:0 8px 8px 0; padding:7px 12px 6px 10px; }
-  #ticker .head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:3px; }
-  #ticker .mark { font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--lime); }
-  #ticker-score { font-variant-numeric:tabular-nums; font-size:12px; color:var(--muted); }
+  .rink-frame { position:relative; width:100%; max-width:min(100%, calc(58vh * 960 / 540)); margin:0 auto; }
+  #ticker { position:absolute; left:6px; right:6px; bottom:6px; z-index:3; margin:0; pointer-events:none; border:1px solid var(--line); border-left:3px solid var(--lime); background:rgba(10,10,10,.88); border-radius:0 8px 8px 0; padding:6px 10px 5px; }
+  #desk-call { display:flex; align-items:baseline; gap:8px; min-height:1.45em; margin-bottom:3px; }
+  #desk-kind { flex:0 0 auto; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--bg); background:var(--desk); padding:2px 7px; border-radius:4px; animation:kindPop .16s ease-out; }
+  #desk-kind.k-hit { background:#fff; }
+  #desk-kind.k-sting, #desk-kind.k-goal, #desk-kind.k-match-point, #desk-kind.k-match-won, #desk-kind.k-bid { background:var(--lime); }
+  #desk-kind.k-whiff, #desk-kind.k-live { background:var(--desk); }
+  #desk-kind.k-clock, #desk-kind.k-time { background:var(--ink); }
+  #desk-line { min-width:0; font-size:13px; line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #ticks { list-style:none; margin:0; padding:0; }
-  .tick { display:flex; gap:10px; align-items:baseline; font-size:13px; line-height:1.4; padding:1px 0; color:var(--ink); }
-  .tick .clk { flex:0 0 2.6em; font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted); }
+  .tick { display:flex; gap:8px; align-items:baseline; font-size:12px; line-height:1.35; padding:1px 0; color:var(--ink); }
+  .tick:first-child { animation:tickIn .16s ease-out; }
+  .tick .clk { flex:0 0 2.4em; font-variant-numeric:tabular-nums; font-size:11px; color:var(--muted); }
+  .tick .k { flex:0 0 auto; min-width:3.2em; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--lime); }
+  .tick.tick-hit .k { color:#fff; }
+  .tick.tick-whiff .k, .tick.tick-live .k { color:var(--desk); }
+  .tick.tick-clock .k, .tick.tick-time .k { color:var(--muted); }
+  .tick .msg { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tick-bot { color:var(--desk); font-weight:700; }
   .tick-build { color:var(--lime); font-weight:700; }
+  @keyframes kindPop { from { transform:scale(1.12); } to { transform:scale(1); } }
+  @keyframes tickIn { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:none; } }
+  @media (max-width:640px){
+    #ticker { margin:0; left:4px; right:4px; bottom:4px; }
+    #desk-line, .tick { font-size:11px; }
+    .tick .k { letter-spacing:.06em; }
+    #ticks .tick:nth-child(n+3) { display:none; }
+  }
   #stage { position:relative; flex:1; display:flex; flex-direction:column; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
-  #rink { position:relative; flex:1; min-width:0; width:100%; touch-action:none; overscroll-behavior:none; }
+  #rink { position:relative; flex:0 1 auto; min-width:0; width:100%; touch-action:none; overscroll-behavior:none; }
   #rink canvas { width:100%; max-width:none; height:auto; display:block; background:#0b0e16; border:1px solid var(--line); border-radius:8px; image-rendering: pixelated; cursor: crosshair; touch-action:none; overscroll-behavior:none; user-select:none; -webkit-user-select:none; }
   #broadcast { position:absolute; inset:0; pointer-events:none; z-index:2; }
   #rule-rail { position:absolute; top:10px; left:12px; right:248px; text-align:center; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); background:rgba(10,10,10,.78); border:1px solid var(--line); border-radius:999px; padding:5px 12px; }
@@ -183,10 +202,6 @@
 <div id="toast" hidden role="status" aria-live="polite">Link copied. Send it.</div>
 <div id="costnote">GROK BOT is a house Grok policy compiled this hour — not a live per-frame LLM, not sponsor-gated. Spent stays $0.00 until a live token meter exists. GROK BUILD is the JS twin. House compute started this fight. Paid Light on this fight is $20.00 — jersey money, not token burn.</div>
 <div id="announcer">Match live. House Grok vs Grok Build.</div>
-<div id="ticker" role="log" aria-live="polite" aria-label="Fight ticker">
-  <div class="head"><span class="mark">Ticker</span><span id="ticker-score">0–0 first to 3</span></div>
-  <ol id="ticks"></ol>
-</div>
 <div id="stage">
   <aside id="fight-sponsor" class="ghost-plate is-live" data-empty="false" aria-label="This fight sponsored by FreedomOS">
     <p class="ghost-kicker">This fight sponsored by</p>
@@ -198,10 +213,19 @@
     <p class="ghost-empty">No bid yet — be the first</p>
   </aside>
   <div id="rink">
-    <canvas id="c" width="960" height="540" tabindex="0"></canvas>
-    <div id="broadcast" aria-hidden="true">
-      <div id="rule-rail">SHOOT · DODGE · DROP THEM — FIRST TO 3</div>
-      <p id="sting" hidden></p>
+    <div class="rink-frame">
+      <canvas id="c" width="960" height="540" tabindex="0"></canvas>
+      <div id="broadcast" aria-hidden="true">
+        <div id="rule-rail">SHOOT · DODGE · DROP THEM — FIRST TO 3</div>
+        <p id="sting" hidden></p>
+      </div>
+      <div id="ticker" role="log" aria-live="polite" aria-label="Fight desk">
+        <div id="desk-call">
+          <span class="kind k-live" id="desk-kind">LIVE</span>
+          <span id="desk-line">Round live · 0–0 first to 3</span>
+        </div>
+        <ol id="ticks"></ol>
+      </div>
     </div>
   </div>
   <div id="plates" aria-label="Fighter life">
@@ -270,7 +294,7 @@
   const $c1=document.getElementById("c1"), $c2=document.getElementById("c2");
   const $w1=document.getElementById("w1"), $w2=document.getElementById("w2");
   const $clock=document.getElementById("clock"), $ann=document.getElementById("announcer");
-  const $ticks=document.getElementById("ticks"), $tickScore=document.getElementById("ticker-score");
+  const $ticks=document.getElementById("ticks"), $deskKind=document.getElementById("desk-kind"), $deskLine=document.getElementById("desk-line");
   const $ctot=document.getElementById("ctot"), $lb=document.getElementById("lb");
   const $seat=document.getElementById("seat"), $spec=document.getElementById("spec"), $watch=document.getElementById("watch");
   const $n1=document.getElementById("n1"), $n2=document.getElementById("n2");
@@ -404,19 +428,40 @@
     }
   }
   const WHO=["Grok Bot","Grok Build"];
+  const FEED=4, WHIFF=32, WHIFF_GAP=850, CLOCK_MARKS=[45,30,15,10,5];
   const feed=[];
+  let clockArmed=ROUND, lastWhiff=[0,0];
   const clockStamp=()=>{ const s=Math.max(0, Math.ceil(tLeft)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
   const scoreNow=()=>rounds[0]+"–"+rounds[1];
   const firstTo=()=>scoreNow()+" first to "+TO;
   const who=id=>`<span class="${id===0?"tick-bot":"tick-build"}">${WHO[id]}</span>`;
-  function paintTicks(){
-    $tickScore.textContent=firstTo();
-    $ticks.innerHTML=feed.map((e,i)=>`<li class="tick" style="opacity:${Math.max(0.45,1-i*0.12)}"><span class="clk">${e.clk}</span><span>${e.html}</span></li>`).join("");
+  const kindSlug=k=>String(k||"live").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"live";
+  function deskCall(kind, html){
+    $deskKind.textContent=kind;
+    $deskKind.className="kind k-"+kindSlug(kind);
+    $deskLine.innerHTML=html;
+    $deskKind.style.animation="none";
+    void $deskKind.offsetWidth;
+    $deskKind.style.animation="";
   }
-  function tick(html){
-    feed.unshift({html, clk:clockStamp()});
-    if(feed.length>5) feed.pop();
+  function paintTicks(){
+    $ticks.innerHTML=feed.map((e,i)=>`<li class="tick tick-${kindSlug(e.kind)}" style="opacity:${Math.max(0.42,1-i*0.16)}"><span class="clk">${e.clk}</span><span class="k">${e.kind}</span><span class="msg">${e.html}</span></li>`).join("");
+  }
+  function tick(kind, html, holdDesk){
+    feed.unshift({kind, html, clk:clockStamp()});
+    if(feed.length>FEED) feed.pop();
     paintTicks();
+    if(!holdDesk) deskCall(kind, html);
+  }
+  function pulseClock(){
+    const s=Math.max(0, Math.ceil(tLeft));
+    for(const m of CLOCK_MARKS){
+      if(clockArmed>m && s<=m) tick("CLOCK", clockStamp()+" still live · <b>"+firstTo()+"</b>");
+    }
+    clockArmed=s;
+  }
+  function shot(x,y,vx,vy,owner,life){
+    return {x,y,vx,vy,owner,life,near:1e9,struck:false};
   }
   function emptySlot(){
     const li=document.createElement("li");
@@ -538,7 +583,7 @@
     if(human===0||human===1) ships[human].bot=false;
     const seed=(s,lead)=>{
       const c=Math.cos(s.a), n=Math.sin(s.a);
-      bullets.push({x:s.x+c*(36+lead*22),y:s.y+n*(36+lead*22),vx:c*BULLET,vy:n*BULLET,owner:s.id,life:BRLIFE-lead*0.1});
+      bullets.push(shot(s.x+c*(36+lead*22),s.y+n*(36+lead*22),c*BULLET,n*BULLET,s.id,BRLIFE-lead*0.1));
     };
     seed(ships[0],0); seed(ships[0],1); seed(ships[1],0); seed(ships[1],2);
   }
@@ -564,11 +609,12 @@
     punch=null; pendingBanner=null; canvas.dataset.punch="0";
     $sting.hidden=true; $sting.textContent=""; $sting.className="";
     resetArena();
+    clockArmed=ROUND; lastWhiff=[0,0];
     const line=reason || (human==null ? "Match live. House Grok vs Grok Build." : "You're in. Same fight.");
     say(line);
     feed.length=0;
-    tick(line+" <b>"+firstTo()+"</b>");
-    tick("Round live. <b>"+firstTo()+"</b>");
+    tick("LIVE", line+" <b>"+firstTo()+"</b>");
+    tick("LIVE", "Round live. <b>"+firstTo()+"</b>");
     renderLb();
     hud();
   }
@@ -580,7 +626,6 @@
     $ctot.textContent=human==null?money0:money((human===0?spent[0]:0)+(human===1?spent[1]:0));
     const s=Math.max(0, Math.ceil(tLeft));
     $clock.textContent = Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
-    $tickScore.textContent=firstTo();
     const you=liveYou();
     if(you) board.you=you;
     const sig=filter+"|"+(you?you.spentN.toFixed(3)+":"+you.wins:"-")+"|"+board.botWins.join(",")+"|"+rounds.join(",");
@@ -952,12 +997,12 @@
     clearTimeout(sting.tid);
     sting.tid=setTimeout(()=>{ $sting.hidden=true; $sting.textContent=""; $sting.className=""; }, 2200);
     say("Bid received. Jersey lands on this fight.");
-    tick("Bid received. Jersey lands on this fight.");
+    tick("BID", "Jersey lands on this fight.");
   }
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE + (s.id===1 && s.bot ? 0.08*Math.random() : 0);
-    bullets.push({x:s.x+Math.cos(s.a)*20,y:s.y+Math.sin(s.a)*20,vx:Math.cos(s.a)*BULLET,vy:Math.sin(s.a)*BULLET,owner:s.id,life:BRLIFE});
+    bullets.push(shot(s.x+Math.cos(s.a)*20,s.y+Math.sin(s.a)*20,Math.cos(s.a)*BULLET,Math.sin(s.a)*BULLET,s.id,BRLIFE));
     shots[s.id]++; charge(s.id, SHOT);
   }
   function bot(s,e,dt){
@@ -1039,9 +1084,9 @@
     freeze=1.6;
     say(reason);
     const champ=rounds[0]===rounds[1]?null:(rounds[0]>rounds[1]?0:1);
-    if(champ==null) tick("Time. Nobody dropped. <b>"+scoreNow()+"</b>");
-    else tick(who(champ)+" takes the match. <b>"+scoreNow()+"</b>");
     if(!alreadyStung){
+      if(champ==null) tick("TIME", "Nobody dropped. <b>"+scoreNow()+"</b>");
+      else tick("MATCH WON", who(champ)+" takes the match. <b>"+scoreNow()+"</b>");
       sting(champ==null?"TIME":"MATCH WON", champ==null?"":(champ===0?"cyan":"lime"));
       playSting();
     }
@@ -1056,6 +1101,7 @@
   }
   function revealBanner(held){
     sting(held.msg, held.cls);
+    deskCall(held.msg==="ROUND WON"?"GOAL":held.msg, "<b>"+firstTo()+"</b>");
     if(held.matchWon) finishMatch(held.reason, true);
     else freeze=BEAT;
   }
@@ -1066,7 +1112,9 @@
       rounds[winner]++;
       say(winner===0?"Grok Bot takes the round.":"Grok Build takes the round.");
       point=rounds[winner]===TO-1 && rounds[0]<TO && rounds[1]<TO;
-      tick(who(winner)+" drops "+who(winner^1)+"."+(point?" Match point.":"")+" <b>"+firstTo()+"</b>");
+      const kind=(rounds[winner]>=TO)?"MATCH WON":(point?"MATCH POINT":"GOAL");
+      tick(kind, who(winner)+" drops "+who(winner^1)+". <b>"+firstTo()+"</b>", true);
+      deskCall("STING", who(winner)+" last hit · <b>"+firstTo()+"</b>");
       hist.push({winner, score:scoreNow()});
       if(hist.length>3) hist.splice(0, hist.length-3);
       paintStakes();
@@ -1102,19 +1150,22 @@
     if(ending){ freeze-=dt; hud(); return; }
     if(punch || pendingBanner){
       tLeft-=dt;
+      pulseClock();
       if(tLeft<=0) timeUp();
       hud();
       return;
     }
     if(freeze>0){
       tLeft-=dt;
+      pulseClock();
       freeze-=dt;
       if(tLeft<=0){ timeUp(); hud(); return; }
-      if(freeze<=0){ spawnShips(); say("Round live."); tick("Round live. <b>"+firstTo()+"</b>"); }
+      if(freeze<=0){ spawnShips(); say("Round live."); tick("LIVE", "Round live. <b>"+firstTo()+"</b>"); }
       hud();
       return;
     }
     tLeft-=dt;
+    pulseClock();
     charge(0, WATCH*dt); charge(1, WATCH*dt);
     const snap=ships.map(s=>({id:s.id,x:s.x,y:s.y,a:s.a,vx:s.vx,vy:s.vy,alive:s.alive}));
     const incoming=bullets.map(b=>({x:b.x,y:b.y,vx:b.vx,vy:b.vy,owner:b.owner,life:b.life}));
@@ -1126,23 +1177,37 @@
       else if(s.id===0) grokPolicy(s, foe(1), incoming, dt);
       else bot(s, foe(0), dt);
       s.x=Math.max(R+8, Math.min(W-R-8, s.x+s.vx*dt));
-      s.y=Math.max(R+24, Math.min(H-R-40, s.y+s.vy*dt));
+      s.y=Math.max(R+24, Math.min(H-R-78, s.y+s.vy*dt));
     }
     for(const b of bullets){ b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt; }
     for(const b of bullets){
-      if(b.life<=0) continue;
       for(const s of ships){
         if(!s.alive||s.id===b.owner) continue;
-        if(Math.hypot(s.x-b.x,s.y-b.y)<R+3){
-          s.hp-=1; b.life=0; s.hit=0.18;
+        const d=Math.hypot(s.x-b.x,s.y-b.y);
+        if(d<b.near) b.near=d;
+        if(b.life<=0||b.struck) continue;
+        if(d<R+3){
+          s.hp-=1; b.life=0; b.struck=true; s.hit=0.18;
           const kill=s.hp<=0;
           bang(s.x,s.y,COL[b.owner],kill);
           flashPlate(s.id);
           if(kill){ s.alive=false; roundOver(b.owner); }
+          else tick("HIT", who(b.owner)+" tags "+who(s.id)+" · "+s.hp+" HP");
         }
       }
     }
-    for(let i=bullets.length-1;i>=0;i--) if(bullets[i].life<=0) bullets.splice(i,1);
+    for(let i=bullets.length-1;i>=0;i--){
+      const b=bullets[i];
+      if(b.life>0) continue;
+      if(!b.struck && b.near<WHIFF){
+        const now=performance.now();
+        if(now-(lastWhiff[b.owner]||0)>WHIFF_GAP){
+          lastWhiff[b.owner]=now;
+          tick("WHIFF", who(b.owner)+" just wide of "+who(b.owner^1));
+        }
+      }
+      bullets.splice(i,1);
+    }
     if(ending){ hud(); return; }
     if(tLeft<=0) timeUp();
     hud();
