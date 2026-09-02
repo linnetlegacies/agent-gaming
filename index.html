@@ -1101,7 +1101,7 @@
   }
   function revealBanner(held){
     sting(held.msg, held.cls);
-    deskCall(held.msg, "<b>"+firstTo()+"</b>");
+    deskCall(held.msg==="ROUND WON"?"GOAL":held.msg, "<b>"+firstTo()+"</b>");
     if(held.matchWon) finishMatch(held.reason, true);
     else freeze=BEAT;
   }
