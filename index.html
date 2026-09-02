@@ -77,10 +77,11 @@
   @keyframes kindPop { from { transform:scale(1.12); } to { transform:scale(1); } }
   @keyframes tickIn { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:none; } }
   @media (max-width:640px){
-    #ticker { margin:0; left:4px; right:4px; bottom:4px; }
+    #ticker { margin:0; left:4px; right:4px; bottom:4px; padding:4px 8px 3px; }
+    #desk-call { min-height:0; margin-bottom:2px; }
     #desk-line, .tick { font-size:11px; }
     .tick .k { letter-spacing:.06em; }
-    #ticks .tick:nth-child(n+3) { display:none; }
+    #ticks .tick:nth-child(n+2) { display:none; }
   }
   #stage { position:relative; flex:1; display:flex; flex-direction:column; align-items:stretch; justify-content:center; padding:0 8px 12px; width:100%; max-width:100%; scroll-margin-top:12px; }
   #rink { position:relative; flex:0 1 auto; min-width:0; width:100%; touch-action:none; overscroll-behavior:none; }
@@ -999,6 +1000,13 @@
     say("Bid received. Jersey lands on this fight.");
     tick("BID", "Jersey lands on this fight.");
   }
+  function iceBottom(){
+    const t=document.getElementById("ticker");
+    const r=canvas.getBoundingClientRect();
+    if(!t || r.height<8) return H-R-78;
+    const top=((t.getBoundingClientRect().top-r.top)/r.height)*H;
+    return Math.max(H*0.52, Math.min(H-R-24, top-R-8));
+  }
   function fire(s){
     if(s.cd>0||!s.alive) return;
     s.cd=FIRE + (s.id===1 && s.bot ? 0.08*Math.random() : 0);
@@ -1170,6 +1178,7 @@
     const snap=ships.map(s=>({id:s.id,x:s.x,y:s.y,a:s.a,vx:s.vx,vy:s.vy,alive:s.alive}));
     const incoming=bullets.map(b=>({x:b.x,y:b.y,vx:b.vx,vy:b.vy,owner:b.owner,life:b.life}));
     const foe=id=>snap.find(x=>x.id===id);
+    const floor=iceBottom();
     for(const s of ships){
       if(!s.alive) continue;
       s.cd=Math.max(0,s.cd-dt);
@@ -1177,7 +1186,7 @@
       else if(s.id===0) grokPolicy(s, foe(1), incoming, dt);
       else bot(s, foe(0), dt);
       s.x=Math.max(R+8, Math.min(W-R-8, s.x+s.vx*dt));
-      s.y=Math.max(R+24, Math.min(H-R-78, s.y+s.vy*dt));
+      s.y=Math.max(R+24, Math.min(floor, s.y+s.vy*dt));
     }
     for(const b of bullets){ b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt; }
     for(const b of bullets){
