@@ -262,6 +262,7 @@
 <script>
 (() => {
   const W=960, H=540, R=16, SPEED=175, BULLET=340, BRLIFE=0.75, FIRE=0.55, HP=8, ROUND=60, TO=3, BEAT=1;
+  const PUNCH=1.12;
   const WATCH=0.00035, SHOT=0.0018;
   const COL=["#00E5FF","#C8FF3D"];
   const canvas=document.getElementById("c"), ctx=canvas.getContext("2d");
@@ -295,8 +296,12 @@
   let human=null, rounds=[0,0], tLeft=ROUND, last=performance.now();
   let freeze=0, ending=false, spent=[0,0], shots=[0,0];
   let shake=0, flashTint=0, flashColor="#fff";
+  let punch=null, pendingBanner=null;
+  let audioArmed=false, actx=null;
   let fightLight=LIGHT_SKU;
   const impacts=[];
+  canvas.dataset.armed="0";
+  canvas.dataset.punch="0";
   const money=n=>"$"+n.toFixed(3);
   const money0="$0.00";
   const money2=n=>"$"+Number(n).toFixed(2);
@@ -317,11 +322,77 @@
     clearTimeout(el.hitTid);
     el.hitTid=setTimeout(()=>el.classList.remove("hit"), 180);
   }
-  function bang(x,y,color){
+  function punchK(u){
+    if(u<=0||u>=1) return 0;
+    if(u<0.30){ const t=u/0.30; return 1-(1-t)*(1-t); }
+    if(u<0.40) return 1;
+    const t=(u-0.40)/0.60;
+    return 1-t*t*(3-2*t);
+  }
+  function armAudio(){
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return;
+      if(!actx) actx=new AC();
+      audioArmed=true;
+      canvas.dataset.armed="1";
+      if(actx.state==="suspended") actx.resume();
+    }catch(e){}
+  }
+  function blip(freq, t0, dur, type, gain, dest){
+    const o=actx.createOscillator();
+    const g=actx.createGain();
+    o.type=type;
+    o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0+0.007);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    o.connect(g); g.connect(dest);
+    o.start(t0); o.stop(t0+dur+0.02);
+  }
+  function playHit(){
+    if(!audioArmed||!actx) return;
+    if(actx.state==="suspended") actx.resume();
+    const t=actx.currentTime;
+    const master=actx.createGain();
+    master.gain.value=0.20;
+    master.connect(actx.destination);
+    blip(92, t, 0.068, "sine", 0.55, master);
+    blip(196, t, 0.042, "square", 0.22, master);
+    const n=Math.max(64, Math.floor(actx.sampleRate*0.036));
+    const buf=actx.createBuffer(1, n, actx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+    const src=actx.createBufferSource();
+    const ng=actx.createGain();
+    src.buffer=buf;
+    ng.gain.setValueAtTime(0.28, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t+0.036);
+    src.connect(ng); ng.connect(master);
+    src.start(t);
+  }
+  function playSting(){
+    if(!audioArmed||!actx) return;
+    if(actx.state==="suspended") actx.resume();
+    const t=actx.currentTime;
+    const master=actx.createGain();
+    master.gain.value=0.24;
+    master.connect(actx.destination);
+    blip(392, t, 0.11, "triangle", 0.50, master);
+    blip(523.25, t+0.055, 0.14, "triangle", 0.42, master);
+    blip(783.99, t+0.11, 0.16, "sine", 0.28, master);
+  }
+  function bang(x,y,color,kill){
     impacts.push({x,y,r:10,life:0.32,color});
-    shake=0.18;
-    flashTint=0.28;
+    shake=kill?0.28:0.18;
+    flashTint=kill?0.38:0.28;
     flashColor=color;
+    playHit();
+    if(kill){
+      punch={x,y,t:0,dur:PUNCH};
+      canvas.dataset.punch="1";
+      playSting();
+    }
   }
   function paintPlates(){
     for(const s of ships){
@@ -490,6 +561,7 @@
     rounds=[0,0]; spent=[0,0]; shots=[0,0];
     $s1.textContent=0; $s2.textContent=0;
     ending=false; freeze=0; shake=0; flashTint=0; impacts.length=0;
+    punch=null; pendingBanner=null; canvas.dataset.punch="0";
     $sting.hidden=true; $sting.textContent=""; $sting.className="";
     resetArena();
     const line=reason || (human==null ? "Match live. House Grok vs Grok Build." : "You're in. Same fight.");
@@ -570,6 +642,7 @@
     aimTouch.active=true; aimTouch.id=id; aimTouch.x=p.x; aimTouch.y=p.y;
   }
   function onCanvasDown(p, id){
+    armAudio();
     takeSeat();
     if(!stick.active) bindStick(id,p);
     else if(!aimTouch.active && id!==stick.id) bindAim(id,p);
@@ -594,6 +667,7 @@
   canvas.addEventListener("mousedown",e=>{
     if(fromTouch()) return;
     if(phoneRink()) e.preventDefault();
+    armAudio();
     mouse.down=true;
     const p=canvasXY(e);
     mouse.x=p.x; mouse.y=p.y;
@@ -623,6 +697,9 @@
   canvas.addEventListener("touchend", endTouch, {passive:false});
   canvas.addEventListener("touchcancel", endTouch, {passive:false});
   addEventListener("touchmove",e=>{ if(stick.active) e.preventDefault(); }, {passive:false});
+  addEventListener("pointerdown", armAudio, {capture:true});
+  addEventListener("mousedown", armAudio, {capture:true});
+  addEventListener("touchstart", armAudio, {capture:true});
   $watch.onclick=()=>{
     document.getElementById("stage").scrollIntoView({behavior:"smooth",block:"center"});
     canvas.focus();
@@ -964,17 +1041,26 @@
     const champ=rounds[0]===rounds[1]?null:(rounds[0]>rounds[1]?0:1);
     if(champ==null) tick("Time. Nobody dropped. <b>"+scoreNow()+"</b>");
     else tick(who(champ)+" takes the match. <b>"+scoreNow()+"</b>");
-    if(!alreadyStung) sting(champ==null?"TIME":"MATCH WON", champ==null?"":(champ===0?"cyan":"lime"));
+    if(!alreadyStung){
+      sting(champ==null?"TIME":"MATCH WON", champ==null?"":(champ===0?"cyan":"lime"));
+      playSting();
+    }
     setTimeout(()=>newMatch(nextMatchLine()), 1600);
   }
   function timeUp(){
+    if(pendingBanner) return;
     tLeft=0;
     if(rounds[0]>rounds[1]) finishMatch("Grok Bot takes the match. Board updated.");
     else if(rounds[1]>rounds[0]) finishMatch("Grok Build takes the match. Board updated.");
     else finishMatch("Time. Nobody dropped.");
   }
+  function revealBanner(held){
+    sting(held.msg, held.cls);
+    if(held.matchWon) finishMatch(held.reason, true);
+    else freeze=BEAT;
+  }
   function roundOver(winner){
-    if(freeze>0 || ending) return;
+    if(freeze>0 || ending || pendingBanner) return;
     let point=false;
     if(winner===0||winner===1){
       rounds[winner]++;
@@ -986,18 +1072,27 @@
       paintStakes();
     }
     $s1.textContent=rounds[0]; $s2.textContent=rounds[1];
+    const cls=winner===0?"cyan":"lime";
     if(rounds[0]>=TO || rounds[1]>=TO){
       const champ=rounds[0]>rounds[1]?"Grok Bot":"Grok Build";
-      sting("MATCH WON", winner===0?"cyan":"lime");
-      finishMatch(champ+" takes the match. Board updated.", true);
+      pendingBanner={msg:"MATCH WON", cls, matchWon:true, reason:champ+" takes the match. Board updated."};
       return;
     }
-    sting(point?"MATCH POINT":"ROUND WON", winner===0?"cyan":"lime");
-    freeze=BEAT;
+    pendingBanner={msg:point?"MATCH POINT":"ROUND WON", cls, matchWon:false};
   }
   function decayFx(dt){
     shake=Math.max(0,shake-dt);
     flashTint=Math.max(0,flashTint-dt*1.6);
+    if(punch){
+      punch.t+=dt;
+      if(punch.t>=punch.dur){
+        const held=pendingBanner;
+        punch=null;
+        pendingBanner=null;
+        canvas.dataset.punch="0";
+        if(held) revealBanner(held);
+      } else canvas.dataset.punch="1";
+    } else canvas.dataset.punch="0";
     for(const s of ships) if(s.hit>0) s.hit=Math.max(0,s.hit-dt);
     for(const p of impacts){ p.life-=dt; p.r+=160*dt; }
     for(let i=impacts.length-1;i>=0;i--) if(impacts[i].life<=0) impacts.splice(i,1);
@@ -1005,6 +1100,12 @@
   function step(dt){
     decayFx(dt);
     if(ending){ freeze-=dt; hud(); return; }
+    if(punch || pendingBanner){
+      tLeft-=dt;
+      if(tLeft<=0) timeUp();
+      hud();
+      return;
+    }
     if(freeze>0){
       tLeft-=dt;
       freeze-=dt;
@@ -1034,9 +1135,10 @@
         if(!s.alive||s.id===b.owner) continue;
         if(Math.hypot(s.x-b.x,s.y-b.y)<R+3){
           s.hp-=1; b.life=0; s.hit=0.18;
-          bang(s.x,s.y,COL[b.owner]);
+          const kill=s.hp<=0;
+          bang(s.x,s.y,COL[b.owner],kill);
           flashPlate(s.id);
-          if(s.hp<=0){ s.alive=false; roundOver(b.owner); }
+          if(kill){ s.alive=false; roundOver(b.owner); }
         }
       }
     }
@@ -1048,8 +1150,18 @@
   function draw(){
     ctx.save();
     if(shake>0){
-      const mag=7*(shake/0.18);
+      const mag=7*(shake/(punch?0.28:0.18));
       ctx.translate((Math.random()-0.5)*mag,(Math.random()-0.5)*mag);
+    }
+    if(punch){
+      const k=punchK(Math.min(1, punch.t/punch.dur));
+      if(k>0){
+        const zoom=1+0.78*k;
+        const px=punch.x, py=punch.y;
+        ctx.translate(W/2+(px-W/2)*(1-0.62*k), H/2+(py-H/2)*(1-0.62*k));
+        ctx.scale(zoom, zoom);
+        ctx.translate(-px, -py);
+      }
     }
     ctx.fillStyle="#0b0e16"; ctx.fillRect(0,0,W,H);
     ctx.strokeStyle="#1a2230"; ctx.lineWidth=1;
