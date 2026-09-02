@@ -54,7 +54,7 @@
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30; background:var(--lime); color:var(--bg); font-weight:800; font-size:13px; padding:8px 16px; border-radius:999px; pointer-events:none; }
   #toast[hidden] { display:none; }
   #announcer { min-height:1.4em; padding:0 18px 8px; color:var(--muted); font-size:14px; letter-spacing:.02em; }
-  .rink-frame { position:relative; width:100%; }
+  .rink-frame { position:relative; width:100%; max-width:min(100%, calc(58vh * 960 / 540)); margin:0 auto; }
   #ticker { position:absolute; left:6px; right:6px; bottom:6px; z-index:3; margin:0; pointer-events:none; border:1px solid var(--line); border-left:3px solid var(--lime); background:rgba(10,10,10,.88); border-radius:0 8px 8px 0; padding:6px 10px 5px; }
   #desk-call { display:flex; align-items:baseline; gap:8px; min-height:1.45em; margin-bottom:3px; }
   #desk-kind { flex:0 0 auto; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--bg); background:var(--desk); padding:2px 7px; border-radius:4px; animation:kindPop .16s ease-out; }
