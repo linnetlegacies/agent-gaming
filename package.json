@@ -1,6 +1,6 @@
 {
   "name": "arena-one",
   "private": true,
-  "scripts": { "deploy": "wrangler deploy", "test": "node scripts/board-continuity.test.mjs" },
+  "scripts": { "deploy": "wrangler deploy", "test": "node scripts/board-continuity.test.mjs && node scripts/paid-return.test.mjs" },
   "devDependencies": { "wrangler": "^4" }
 }
