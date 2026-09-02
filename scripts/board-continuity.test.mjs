@@ -28,11 +28,27 @@ must(/AG_FIGHT_SPONSOR=\{name:"FreedomOS"/, "FreedomOS jersey");
 must(/PAY_LINK="https:\/\/buy\.stripe\.com\/aFa8wR6becIZ3ZF8QM2Fa00"/, "Payment Link");
 must(/function iceBottom\(\)/, "iceBottom");
 must(/punch=\{x,y,t:0,dur:PUNCH\}/, "last-hit punch");
+must(/LIVE · NOW/, "LIVE · NOW booth");
+must(/You're watching/, "watchers framing");
+must(/Next match is live/, "next match broadcast");
+must(/Opening card\./, "opening card hist");
+must(/House spent stays \$0\.00/, "relocated costnote");
 mustNot(/board\.you=you/, "hud must not write liveYou onto board.you");
 mustNot(/board\.you=liveYou\(\)/, "takeSeat/spectate must not bake liveYou into session");
 mustNot(/\bTim\b/, "no Tim");
 mustNot(/faith/i, "no faith");
 mustNot(/grind-coach/i, "no grind-coach");
+mustNot(/per-frame LLM/, "no LLM explainer on the page");
+mustNot(/House compute is already on/, "no compute leftover");
+mustNot(/sponsor-gated/, "no sponsor-gated leftover");
+mustNot(/viewers? \d/, "no fake viewer count");
+
+const stageAt=html.indexOf('id="stage"');
+const costAt=html.indexOf('id="costnote"');
+const boothAt=html.indexOf('id="booth"');
+const boardAt=html.indexOf('id="board"');
+if(boothAt<0 || boothAt>stageAt) fail("booth must sit above the fight");
+if(costAt<0 || costAt<stageAt || costAt<boardAt) fail("costnote must sit under the board, not above the fight");
 
 function personJersey(side){
   return { who:side===0?"YOU · GROK BOT":"YOU · GROK BUILD", cls:side===0?"cyan":"mag" };
