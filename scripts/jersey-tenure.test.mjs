@@ -29,6 +29,9 @@ must(/PAY_LINK="https:\/\/buy\.stripe\.com\/aFa8wR6becIZ3ZF8QM2Fa00"/, "Payment 
 must(/openBidField\(\)/, "plate CTAs focus existing rail");
 must(/window\.AG_setFightSponsor=setFightSponsor/, "operator setter");
 must(/q\.get\("light"\)==="1"/, "light=1 return");
+must(/You're next at the rail\. Jersey lands after this fight/, "held paid return is next, not now");
+must(/Bid received\. Jersey lands on this fight\./, "open paid return may land on this fight");
+mustNot(/until that paint/, "no until-that-paint leftover");
 must(/data:image\/svg\+xml/, "inline SVG favicon");
 must(/Built with <a href="https:\/\/x\.ai\/bot"/, "footer stays Grok Bot");
 must(/House spent stays \$0\.00/, "house spend stays true");

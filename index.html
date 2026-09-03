@@ -1140,10 +1140,61 @@
     if(paid) return "paid";
     return "";
   }
+  function returnCopy(kind, held, face){
+    const name=typeof face==="string"?face.trim():"";
+    const paid=kind==="paid";
+    if(paid){
+      if(held){
+        const core="Bid received. You're next at the rail. Jersey lands after this fight.";
+        return {
+          plate: name ? "Bid received · "+name+" · you're next at the rail. Jersey lands after this fight." : core,
+          note: name
+            ? "Bid received. "+name+" is next at the rail. Jersey lands after this fight. This fight still wears FreedomOS. Seat and spectate stay free."
+            : core+" This fight still wears FreedomOS. Seat and spectate stay free.",
+          banner: name ? "Bid received · "+name+" · watch this fight" : "Bid received. Watch this fight.",
+          say: name ? "Bid received. "+name+" · you're next at the rail. Jersey lands after this fight." : core,
+          tick: name ? name+" · next at the rail. Jersey lands after this fight." : "You're next at the rail. Jersey lands after this fight."
+        };
+      }
+      const core="Bid received. Jersey lands on this fight.";
+      return {
+        plate: name ? "Bid received · "+name+" · jersey lands on this fight" : core,
+        note: name
+          ? "Bid received. "+name+" is the next jersey. Jersey lands on this fight. Seat and spectate stay free."
+          : core+" Seat and spectate stay free.",
+        banner: name ? "Bid received · "+name+" · watch this fight" : "Bid received. Watch this fight.",
+        say: name ? "Bid received. "+name+" · jersey lands on this fight." : core,
+        tick: name ? name+" · jersey lands on this fight." : "Jersey lands on this fight."
+      };
+    }
+    if(held){
+      const core="Your bid is at the card rail. If Light $20 clears, you're next — jersey lands after this fight.";
+      return {
+        plate: name ? name+" is at the card rail. If Light $20 clears, you're next — jersey lands after this fight." : core,
+        note: name
+          ? name+" is at the card rail. If Light $20 clears, you're next — jersey lands after this fight. Seat and spectate stay free."
+          : core+" Seat and spectate stay free.",
+        banner: name ? name+" is at the rail · watch this fight" : "Your bid is at the rail. Watch this fight.",
+        say: name ? name+" is at the card rail." : "Your bid is at the card rail.",
+        tick: name ? name+" at the card rail." : "Bid at the card rail."
+      };
+    }
+    const core="Your URL or @handle is at the card rail. If Light $20 clears, this plate wears that jersey.";
+    return {
+      plate: name ? name+" is at the card rail. If Light $20 clears, this plate wears that jersey." : "Your bid is at the card rail. Jersey path is this plate.",
+      note: name
+        ? name+" is at the card rail. If Light $20 clears, this plate wears that jersey. Seat and spectate stay free."
+        : core+" Seat and spectate stay free.",
+      banner: name ? name+" is at the rail · watch this fight" : "Your bid is at the rail. Watch this fight.",
+      say: name ? name+" is at the card rail." : "Your bid is at the card rail.",
+      tick: name ? name+" at the card rail." : "Bid at the card rail."
+    };
+  }
   function paintReturn(kind, opt){
     const announce=opt && opt.announce;
     const bid=readBid();
     const face=bidFace(bid && bid.raw);
+    const held=$plate.classList.contains("is-live");
     if(bid && $bid && !$bid.value) $bid.value=bid.raw.slice(0,240);
     $plate.classList.remove("is-return","is-pending");
     $plate.removeAttribute("data-return");
@@ -1165,13 +1216,13 @@
       $unlock.textContent="Card rail closed. Type the URL or @handle again.";
       if($sponsorReturn){
         $sponsorReturn.hidden=false;
-        $sponsorReturn.textContent=$plate.classList.contains("is-live")
+        $sponsorReturn.textContent=held
           ? "Card rail closed. This fight still wears FreedomOS. Seat stays free."
           : "Card rail closed. The Light slot is still open. Seat stays free.";
       }
       if($sponsorNote) $sponsorNote.textContent="Card rail closed. Seat and spectate stay free. Your URL or @handle is the bid. Stripe takes the card.";
-      if($ghostEmpty && !$plate.classList.contains("is-live")) $ghostEmpty.textContent=openPlateCopy().empty;
-      $plate.setAttribute("aria-label", $plate.classList.contains("is-live")?"This fight sponsored by FreedomOS. This fight. Next Light open — $20 names the next fight.":openPlateCopy().aria);
+      if($ghostEmpty && !held) $ghostEmpty.textContent=openPlateCopy().empty;
+      $plate.setAttribute("aria-label", held?"This fight sponsored by FreedomOS. This fight. Next Light open — $20 names the next fight.":openPlateCopy().aria);
       syncSponsor();
       if(announce){
         say("Card rail closed. Same fight.");
@@ -1180,7 +1231,7 @@
       return;
     }
     $plate.classList.add("is-return");
-    if(!$plate.classList.contains("is-live")) $plate.classList.add("is-pending");
+    if(!held) $plate.classList.add("is-pending");
     $plate.dataset.return="1";
     if($sponsor) $sponsor.classList.add("is-return");
     ctaMode="watch";
@@ -1191,36 +1242,23 @@
     $unlock.setAttribute("role","button");
     $unlock.tabIndex=0;
     const paid=kind==="paid";
+    const copy=returnCopy(kind, held, face);
     if($sponsorH2) $sponsorH2.textContent=paid?"Your bid is in":"Your bid is at the rail";
-    const plateLine=paid
-      ? (face ? "Bid received · "+face+" · jersey lands on this fight" : "Bid received. Jersey lands on this fight.")
-      : (face ? face+" is at the card rail. Jersey path is this plate." : "Your bid is at the card rail. Jersey path is this plate.");
-    if($ghostEmpty) $ghostEmpty.textContent=plateLine;
-    $plate.setAttribute("aria-label", plateLine);
-    if($sponsorNote) $sponsorNote.textContent=paid
-      ? (face
-        ? "Bid received. "+face+" is the next jersey. This fight still wears FreedomOS until that paint. Seat and spectate stay free."
-        : "Bid received. Jersey lands on this fight. This fight still wears FreedomOS until that paint. Seat and spectate stay free.")
-      : (face
-        ? face+" is at the card rail. If Light $20 clears, this plate wears that jersey. Seat and spectate stay free."
-        : "Your URL or @handle is at the card rail. If Light $20 clears, this plate wears that jersey. Seat and spectate stay free.");
+    if($ghostEmpty) $ghostEmpty.textContent=copy.plate;
+    $plate.setAttribute("aria-label", copy.plate);
+    if($sponsorNote) $sponsorNote.textContent=copy.note;
     if($sponsorReturn){
       $sponsorReturn.hidden=false;
-      $sponsorReturn.textContent=paid
-        ? (face ? "Bid received · "+face+" · watch this fight" : "Bid received. Watch this fight.")
-        : (face ? face+" is at the rail · watch this fight" : "Your bid is at the rail. Watch this fight.");
+      $sponsorReturn.textContent=copy.banner;
     }
     if(announce){
       if(paid){
         sting("BID RECEIVED","lime");
         clearTimeout(sting.tid);
         sting.tid=setTimeout(()=>{ $sting.hidden=true; $sting.textContent=""; $sting.className=""; }, 2200);
-        say(face ? "Bid received. "+face+" · jersey lands on this fight." : "Bid received. Jersey lands on this fight.");
-        tick("BID", face ? esc(face)+" · jersey lands on this fight." : "Jersey lands on this fight.");
-      } else {
-        say(face ? face+" is at the card rail." : "Your bid is at the card rail.");
-        tick("BID", face ? esc(face)+" at the card rail." : "Bid at the card rail.");
       }
+      say(copy.say);
+      tick("BID", esc(copy.tick));
     }
   }
   function paintGhost(){

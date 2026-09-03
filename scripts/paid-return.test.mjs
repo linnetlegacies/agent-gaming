@@ -18,9 +18,12 @@ must(/BID_KEY="ag-light-bid"/, "bid storage key");
 must(/Watch this fight/, "next-watcher CTA");
 must(/Your bid is in/, "paid confirmation heading");
 must(/Your bid is at the rail/, "rail confirmation heading");
-must(/jersey lands on this fight/, "jersey path language");
-must(/This fight still wears FreedomOS until that paint/, "FreedomOS stays until paint");
-must(/If Light \$20 clears, this plate wears that jersey/, "honest rail copy");
+must(/function returnCopy\(kind, held, face\)\{/, "returnCopy");
+must(/You're next at the rail\. Jersey lands after this fight/, "held paid return");
+must(/Bid received\. Jersey lands on this fight\./, "open paid return");
+must(/This fight still wears FreedomOS/, "FreedomOS stays while held");
+must(/If Light \$20 clears, you're next — jersey lands after this fight/, "held pending return");
+must(/If Light \$20 clears, this plate wears that jersey/, "open pending return");
 must(/Card rail closed/, "cancel copy");
 must(/Send another URL if you want a different plate/, "re-arm path");
 must(/ctaMode==="watch"/, "watch CTA mode");
@@ -88,5 +91,47 @@ const sponsorAt=html.indexOf('id="sponsor"');
 const returnAt=html.indexOf('id="sponsor-return"');
 if(sponsorAt<0 || returnAt<0 || returnAt<sponsorAt) fail("sponsor-return must sit in the sponsor rail");
 if(stageAt<0 || sponsorAt<stageAt) fail("sponsor rail stays under the fight");
+
+function sliceFn(name){
+  const start=html.indexOf("function "+name+"(");
+  if(start<0) fail("extract "+name);
+  let i=html.indexOf("{", start);
+  let depth=0;
+  for(; i<html.length; i++){
+    if(html[i]==="{") depth++;
+    else if(html[i]==="}"){
+      depth--;
+      if(depth===0) return html.slice(start, i+1);
+    }
+  }
+  fail("unclosed "+name);
+}
+const returnCopy=(0, eval)("("+sliceFn("returnCopy")+")");
+const heldPaid=returnCopy("paid", true, "");
+assert.equal(heldPaid.say, "Bid received. You're next at the rail. Jersey lands after this fight.");
+assert.equal(heldPaid.plate, "Bid received. You're next at the rail. Jersey lands after this fight.");
+assert.ok(heldPaid.note.includes("Jersey lands after this fight."));
+assert.ok(heldPaid.note.includes("This fight still wears FreedomOS."));
+assert.equal(heldPaid.plate.includes("Jersey lands on this fight"), false);
+assert.equal(heldPaid.note.includes("Jersey lands on this fight"), false);
+assert.equal(heldPaid.say.includes("until that paint"), false);
+const heldPaidFace=returnCopy("paid", true, "acme.com");
+assert.ok(heldPaidFace.plate.includes("you're next at the rail"));
+assert.ok(heldPaidFace.plate.includes("Jersey lands after this fight."));
+assert.equal(heldPaidFace.plate.includes("Jersey lands on this fight"), false);
+assert.equal(heldPaidFace.note.includes("Jersey lands on this fight"), false);
+const openPaid=returnCopy("paid", false, "");
+assert.equal(openPaid.say, "Bid received. Jersey lands on this fight.");
+assert.equal(openPaid.plate, "Bid received. Jersey lands on this fight.");
+const heldRail=returnCopy("rail", true, "");
+assert.ok(heldRail.plate.includes("If Light $20 clears, you're next"));
+assert.ok(heldRail.plate.includes("jersey lands after this fight"));
+assert.equal(heldRail.plate.includes("Bid received"), false);
+assert.equal(heldRail.note.includes("Bid received"), false);
+assert.equal(heldRail.plate.includes("Jersey lands on this fight"), false);
+const openRail=returnCopy("rail", false, "acme.com");
+assert.ok(openRail.plate.includes("If Light $20 clears, this plate wears that jersey"));
+assert.equal(openRail.plate.includes("Bid received"), false);
+assert.equal(openRail.note.includes("Bid received"), false);
 
 console.log("paid-return: ok");
