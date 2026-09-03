@@ -10,43 +10,46 @@ function fail(msg){ throw new Error(msg); }
 function must(re, label){ if(!re.test(html)) fail("missing "+label); }
 function mustNot(re, label){ if(re.test(html)) fail("forbidden "+label); }
 
-must(/function parseSponsorTenure\(s\)\{/, "parseSponsorTenure");
-must(/function tenureHeldLine\(fightsLeft, untilMs, now\)\{/, "tenureHeldLine");
-must(/function tenureIsLive\(t, now\)\{/, "tenureIsLive");
-must(/function tenureOpenCopy\(\)\{/, "tenureOpenCopy");
-must(/function nextTenure\(t\)\{/, "nextTenure");
-must(/function consumeFightTenure\(\)\{/, "consumeFightTenure");
-must(/function expireFightSponsor\(\)\{/, "expireFightSponsor");
-must(/consumeFightTenure\(\);/, "match end consumes tenure");
-must(/This fight · slot opens next/, "held copy names this fight");
-must(/OPEN · NEXT LIGHT/, "open kicker");
-must(/\$20 · name and logo on this fight/, "open offer");
+must(/function openPlateCopy\(\)\{/, "openPlateCopy");
+must(/function setFightSponsor\(s\)\{/, "setFightSponsor");
+must(/function paintGhost\(\)\{/, "paintGhost");
+must(/function finishMatch\(reason, alreadyStung\)\{/, "finishMatch");
+must(/NEXT LIGHT OPEN/, "next-light kicker on held plate");
+must(/\$20 names the next fight/, "next-light offer");
+must(/id="ghost-next-bid"/, "next-light CTA on plate");
+must(/id="ghost-scope"/, "this-fight scope line");
+must(/>This fight<\/p>/, "This fight scope copy");
+must(/\$20\.00 · paid Light · this fight/, "held money line");
+must(/OPEN · NEXT LIGHT/, "open kicker when globally empty");
 must(/Slot is open\. Bid takes the plate\./, "open invite");
-must(/id="ghost-bid"/, "open bid control on the plate");
-must(/id="ghost-tenure"/, "tenure line");
-must(/AG_FIGHT_SPONSOR=\{name:"FreedomOS"/, "FreedomOS jersey stays");
-must(/light:20,fights:1/, "FreedomOS tenure is one fight");
+must(/id="ghost-bid"/, "open bid control");
+must(/AG_FIGHT_SPONSOR=\{name:"FreedomOS"/, "FreedomOS configured globally");
+must(/light:20\}/, "FreedomOS light without local fights field");
 must(/PAY_LINK="https:\/\/buy\.stripe\.com\/aFa8wR6becIZ3ZF8QM2Fa00"/, "Payment Link unchanged");
-must(/q\.get\("light"\)==="1"/, "light=1 return");
-must(/sid\.slice\(0,3\)==="cs_"/, "session_id cs_");
+must(/openBidField\(\)/, "plate CTAs focus existing rail");
 must(/window\.AG_setFightSponsor=setFightSponsor/, "operator setter");
-must(/window\.AG_consumeFight=consumeFightTenure/, "hidden consume hook");
-must(/window\.AG_expireSponsor=expireFightSponsor/, "hidden expire hook");
-must(/TENURE_DEFAULT_FIGHTS=1/, "default tenure is one fight");
+must(/q\.get\("light"\)==="1"/, "light=1 return");
 must(/data:image\/svg\+xml/, "inline SVG favicon");
 must(/Built with <a href="https:\/\/x\.ai\/bot"/, "footer stays Grok Bot");
 must(/House spent stays \$0\.00/, "house spend stays true");
 
+mustNot(/ag-light-tenure/, "no sponsor tenure storage key");
+mustNot(/function consumeFightTenure/, "no local tenure consume");
+mustNot(/function expireFightSponsor/, "no local tenure expire");
+mustNot(/function pulseTenure/, "no local tenure pulse");
+mustNot(/function parseSponsorTenure/, "no local tenure parser");
+mustNot(/window\.AG_consumeFight/, "no consume hook");
+mustNot(/window\.AG_expireSponsor/, "no expire hook");
+mustNot(/consumeFightTenure\(\)/, "match end must not mutate sponsor");
+mustNot(/slot opens next/, "no fake local countdown copy");
+mustNot(/fights left on the card/, "no fake fight countdown");
+mustNot(/left on this run/, "no fake time countdown");
 mustNot(/prize pool/i, "no prize pool");
 mustNot(/jackpot/i, "no jackpot");
 mustNot(/gambling/i, "no gambling");
 mustNot(/wager/i, "no wager");
 mustNot(/\bTim\b/, "no Tim");
 mustNot(/faith/i, "no faith");
-mustNot(/grind-coach/i, "no grind-coach");
-mustNot(/getfreedomos\.com chrome/i, "no FO chrome leftover");
-mustNot(/id="tenure-debug"/, "no visible test control");
-mustNot(/Fast-forward tenure/, "no visible fast-forward");
 
 function sliceFn(name){
   const start=html.indexOf("function "+name+"(");
@@ -63,59 +66,38 @@ function sliceFn(name){
   fail("unclosed "+name);
 }
 
-const tenureFns=(0, eval)("(function(){ const TENURE_DEFAULT_FIGHTS=1; "+
-  ["parseSponsorTenure","tenureClock","tenureHeldLine","tenureIsLive","tenureOpenCopy","nextTenure"].map(sliceFn).join("\n")+
-  "; return {parseSponsorTenure,tenureClock,tenureHeldLine,tenureIsLive,tenureOpenCopy,nextTenure}; })()");
-const {parseSponsorTenure, tenureClock, tenureHeldLine, tenureIsLive, tenureOpenCopy, nextTenure}=tenureFns;
-
-assert.deepEqual(parseSponsorTenure({name:"FreedomOS",url:"https://getfreedomos.com",logo:"https://getfreedomos.com/logo/f/f-logo-64x64.png",light:20}), {fights:1, until:0, cap:true}, "today's setter shape defaults to one fight");
-assert.doesNotThrow(()=>parseSponsorTenure(null));
-assert.doesNotThrow(()=>parseSponsorTenure("FreedomOS"));
-assert.doesNotThrow(()=>parseSponsorTenure({name:"Acme", fights:"nope", until:"later"}));
-assert.equal(parseSponsorTenure(null).fights, 1);
-assert.equal(parseSponsorTenure({fights:3}).fights, 3);
-assert.equal(parseSponsorTenure({tenure:{fights:4}}).fights, 4);
-assert.equal(parseSponsorTenure({fights:"2"}).fights, 2);
-assert.equal(parseSponsorTenure({fights:0}).fights, 0);
-assert.equal(parseSponsorTenure({until:1700000000000}).cap, false);
-assert.equal(parseSponsorTenure({until:1700000000000}).fights, 0);
-assert.equal(parseSponsorTenure({until:1700000000}).until, 1700000000000);
-assert.ok(parseSponsorTenure({until:"2030-01-01T00:00:00Z"}).until > 0);
-
-assert.equal(tenureHeldLine(1, 0, 0), "This fight · slot opens next");
-assert.equal(tenureHeldLine(2, 0, 0), "2 fights left on the card");
-assert.equal(tenureHeldLine(3, 0, 0), "3 fights left on the card");
-assert.equal(tenureHeldLine(0, 0, 0), "");
-assert.match(tenureHeldLine(1, 1_000_000, 880_000), /This fight · 2:00 left on this run/);
-assert.match(tenureHeldLine(2, 1_000_000, 880_000), /2 fights left on the card · 2:00 left on this run/);
-assert.match(tenureClock(1_000_000, 40_000), /16:00 left on this run/);
-
-assert.equal(tenureIsLive({fights:1, until:0, cap:true}, 0), true);
-assert.equal(tenureIsLive({fights:0, until:0, cap:true}, 0), false);
-assert.equal(tenureIsLive({fights:2, until:50, cap:true}, 100), false);
-assert.equal(tenureIsLive({fights:0, until:200, cap:false}, 100), true);
-assert.equal(tenureIsLive({fights:0, until:50, cap:false}, 100), false);
-assert.equal(tenureIsLive({fights:0, until:200, cap:true}, 100), false, "fight cap exhausted even if time remains");
-
-assert.deepEqual(nextTenure({fights:2, until:0, cap:true}), {fights:1, until:0, cap:true});
-assert.deepEqual(nextTenure({fights:1, until:0, cap:true}), {fights:0, until:0, cap:true});
-assert.equal(tenureIsLive(nextTenure({fights:1, until:0, cap:true}), 0), false);
-assert.deepEqual(nextTenure({fights:0, until:9, cap:false}), {fights:0, until:9, cap:false});
-
-let left={fights:3, until:0, cap:true};
-left=nextTenure(left);
-assert.equal(tenureHeldLine(left.fights, 0, 0), "2 fights left on the card");
-left=nextTenure(left);
-assert.equal(tenureHeldLine(left.fights, 0, 0), "This fight · slot opens next");
-left=nextTenure(left);
-assert.equal(tenureIsLive(left, 0), false);
-
-const open=tenureOpenCopy();
+const openPlateCopy=(0, eval)("("+sliceFn("openPlateCopy")+")");
+const open=openPlateCopy();
 assert.equal(open.kicker, "OPEN · NEXT LIGHT");
 assert.equal(open.offer, "$20 · name and logo on this fight");
 assert.equal(open.empty, "Slot is open. Bid takes the plate.");
 assert.equal(open.bid, "Sponsor this fight · $20");
-assert.match(open.aria, /\$20/);
-assert.doesNotMatch(JSON.stringify(open), /prize|jackpot|wager|faith|\bTim\b|grind/i);
+
+const finishMatch=sliceFn("finishMatch");
+assert.doesNotMatch(finishMatch, /consumeFightTenure|expireFightSponsor|pulseTenure|writeTenurePersist|readTenurePersist/);
+
+function sponsorConfigured(s){
+  const name=s && typeof s.name==="string" ? s.name.trim().slice(0,80) : "";
+  const logo=s && s.logo ? String(s.logo).trim() : "";
+  return !!(name || logo);
+}
+
+assert.equal(sponsorConfigured({name:"FreedomOS",url:"https://getfreedomos.com",logo:"https://getfreedomos.com/logo/f/f-logo-64x64.png",light:20}), true);
+assert.equal(sponsorConfigured(null), false);
+assert.equal(sponsorConfigured({}), false);
+assert.equal(sponsorConfigured({name:"",logo:""}), false);
+
+const heldHtml=html.match(/<aside id="fight-sponsor"[\s\S]*?<\/aside>/);
+if(!heldHtml) fail("fight-sponsor markup");
+assert.match(heldHtml[0], /FreedomOS/);
+assert.match(heldHtml[0], /\$20\.00 · paid Light · this fight/);
+assert.match(heldHtml[0], />This fight</);
+assert.match(heldHtml[0], /NEXT LIGHT OPEN/);
+assert.match(heldHtml[0], /\$20 names the next fight/);
+assert.match(heldHtml[0], /Sponsor next fight · \$20/);
+
+const initBlock=html.slice(html.indexOf("window.AG_FIGHT_SPONSOR"), html.indexOf("window.AG_setFightSponsor"));
+assert.match(initBlock, /setFightSponsor\(window\.AG_FIGHT_SPONSOR\)/);
+assert.match(initBlock, /else paintGhost\(\)/);
 
 console.log("jersey-tenure: ok");
