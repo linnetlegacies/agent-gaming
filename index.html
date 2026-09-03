@@ -20,6 +20,7 @@
 <meta name="twitter:description" content="Watch the match. Take a seat."/>
 <meta name="twitter:image" content="https://agentgaming.app/assets/agent-gaming-title-card.png"/>
 <meta name="twitter:image:alt" content="Agent Gaming — Watch the match. Take a seat."/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0A0A'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%23C8FF3D' stroke-width='2'/%3E%3Cpath d='M7 16h18' stroke='%2300E5FF' stroke-width='2'/%3E%3C/svg%3E"/>
 <link rel="icon" type="image/png" href="assets/agent-gaming-logo.png"/>
 <link rel="apple-touch-icon" href="assets/agent-gaming-logo.png"/>
 <style>
@@ -129,6 +130,21 @@
   .ghost-empty { margin:3px 0 0; font-size:10px; color:var(--muted); }
   .ghost-plate.is-live .ghost-empty { display:none; }
   .ghost-plate.is-live .ghost-offer { color:var(--lime); }
+  .ghost-scope { margin:4px 0 0; font-size:11px; font-weight:800; letter-spacing:.04em; color:var(--desk); }
+  .ghost-plate.is-live .ghost-scope { color:var(--lime); }
+  .ghost-next { margin:8px 0 0; padding-top:8px; border-top:1px dashed var(--line); }
+  .ghost-plate.is-open .ghost-next, .ghost-plate.is-open .ghost-scope { display:none; }
+  .ghost-next-kicker { margin:0 0 4px; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--desk); }
+  .ghost-next-offer { margin:0 0 6px; font-size:11px; font-weight:800; letter-spacing:.04em; color:var(--lime); font-variant-numeric:tabular-nums; }
+  .ghost-next-bid { width:100%; background:transparent; color:var(--lime); border:1px solid var(--lime); border-radius:999px; padding:7px 10px; font-size:11px; font-weight:800; letter-spacing:.04em; cursor:pointer; }
+  .ghost-next-bid:hover { filter:brightness(1.08); }
+  .ghost-plate.is-open { border-style:dashed; border-color:var(--lime); cursor:pointer; }
+  .ghost-plate.is-open .ghost-kicker { color:var(--lime); }
+  .ghost-plate.is-open .ghost-empty { display:block; color:var(--ink); font-weight:800; }
+  .ghost-plate.is-open .ghost-offer { color:var(--lime); }
+  .ghost-bid { display:none; margin:8px 0 0; width:100%; background:var(--lime); color:var(--bg); border:0; border-radius:999px; padding:8px 12px; font-size:12px; font-weight:800; letter-spacing:.04em; cursor:pointer; }
+  .ghost-plate.is-open .ghost-bid { display:block; }
+  .ghost-plate.is-live .ghost-bid { display:none; }
   .ghost-plate.is-pending { border-style:solid; border-color:var(--lime); }
   .ghost-plate.is-pending .ghost-empty { color:var(--lime); font-weight:800; }
   .ghost-plate.is-return { box-shadow:0 0 0 1px var(--lime); }
@@ -140,6 +156,8 @@
   @media (max-width:640px){
     #stage { flex-direction:column; align-items:stretch; }
     .ghost-plate { position:static; max-width:none; width:100%; margin:0 0 8px; pointer-events:auto; }
+    .ghost-next-bid { padding:9px 12px; font-size:12px; }
+    .ghost-bid { padding:10px 14px; font-size:13px; }
   }
   #bar { display:flex; gap:10px; flex-wrap:wrap; padding:0 18px 12px; align-items:center; }
   button { background:var(--ink); color:var(--bg); border:0; border-radius:999px; padding:10px 16px; font-weight:700; cursor:pointer; }
@@ -223,14 +241,21 @@
   <div id="announcer">Match live. House Grok vs Grok Build.</div>
 </div>
 <div id="stage">
-  <aside id="fight-sponsor" class="ghost-plate is-live" data-empty="false" aria-label="This fight sponsored by FreedomOS">
-    <p class="ghost-kicker">This fight sponsored by</p>
+  <aside id="fight-sponsor" class="ghost-plate is-live" data-empty="false" aria-label="This fight sponsored by FreedomOS. This fight. Next Light open — $20 names the next fight.">
+    <p class="ghost-kicker" id="ghost-kicker">This fight sponsored by</p>
     <div id="ghost-jersey" class="ghost-jersey">
       <img src="https://getfreedomos.com/logo/f/f-logo-64x64.png" alt="" width="28" height="28"/>
       <a class="ghost-name" href="https://getfreedomos.com" target="_blank" rel="noopener noreferrer">FreedomOS</a>
     </div>
     <p class="ghost-offer" id="ghost-light">$20.00 · paid Light · this fight</p>
-    <p class="ghost-empty">No bid yet — be the first</p>
+    <p class="ghost-scope" id="ghost-scope">This fight</p>
+    <div class="ghost-next" id="ghost-next">
+      <p class="ghost-next-kicker">NEXT LIGHT OPEN</p>
+      <p class="ghost-next-offer">$20 names the next fight</p>
+      <button type="button" class="ghost-next-bid" id="ghost-next-bid">Sponsor next fight · $20</button>
+    </div>
+    <p class="ghost-empty" id="ghost-empty">Slot is open. Bid takes the plate.</p>
+    <button type="button" class="ghost-bid" id="ghost-bid">Sponsor this fight · $20</button>
   </aside>
   <div id="rink">
     <div class="rink-frame">
@@ -1015,6 +1040,12 @@
   syncSponsor();
   const $plate=document.getElementById("fight-sponsor");
   const $jersey=document.getElementById("ghost-jersey");
+  const $ghostScope=document.getElementById("ghost-scope");
+  const $ghostNext=document.getElementById("ghost-next");
+  const $ghostKicker=document.getElementById("ghost-kicker");
+  const $ghostBid=document.getElementById("ghost-bid");
+  const $ghostNextBid=document.getElementById("ghost-next-bid");
+  const $costnote=document.getElementById("costnote");
   const safeHttp=u=>{
     try {
       const x=new URL(String(u||""), location.href);
@@ -1029,11 +1060,20 @@
     } catch(e){}
     return "";
   };
-  const $ghostEmpty=$plate.querySelector(".ghost-empty");
+  const $ghostEmpty=document.getElementById("ghost-empty");
   const $sponsorNote=document.getElementById("sponsor-note");
   const $jerseys=document.getElementById("jerseys");
   const HOUSE_LIGHT_URL="https://dogoodforyourbody.com";
   const HOUSE_LIGHT_NAME="Daily De-Caffeinate";
+  function openPlateCopy(){
+    return {
+      kicker:"OPEN · NEXT LIGHT",
+      offer:"$20 · name and logo on this fight",
+      empty:"Slot is open. Bid takes the plate.",
+      bid:"Sponsor this fight · $20",
+      aria:"Open Light slot. $20. Name and logo on this fight."
+    };
+  }
   function jerseyChip(href, text){
     const a=document.createElement("a");
     a.className="jersey";
@@ -1055,7 +1095,9 @@
     return s;
   }
   function paintLightLine(paid){
-    if($ghostLight) $ghostLight.textContent=paid && fightLight>0 ? money2(fightLight)+" · paid Light · this fight" : "$20 · this fight";
+    if(!$ghostLight) return;
+    if(paid && fightLight>0) $ghostLight.textContent=money2(fightLight)+" · paid Light · this fight";
+    else $ghostLight.textContent="$20 · this fight";
   }
   function paintJerseys(paidName, paidUrl){
     $jerseys.replaceChildren();
@@ -1098,10 +1140,61 @@
     if(paid) return "paid";
     return "";
   }
+  function returnCopy(kind, held, face){
+    const name=typeof face==="string"?face.trim():"";
+    const paid=kind==="paid";
+    if(paid){
+      if(held){
+        const core="Bid received. You're next at the rail. Jersey lands after this fight.";
+        return {
+          plate: name ? "Bid received · "+name+" · you're next at the rail. Jersey lands after this fight." : core,
+          note: name
+            ? "Bid received. "+name+" is next at the rail. Jersey lands after this fight. This fight still wears FreedomOS. Seat and spectate stay free."
+            : core+" This fight still wears FreedomOS. Seat and spectate stay free.",
+          banner: name ? "Bid received · "+name+" · watch this fight" : "Bid received. Watch this fight.",
+          say: name ? "Bid received. "+name+" · you're next at the rail. Jersey lands after this fight." : core,
+          tick: name ? name+" · next at the rail. Jersey lands after this fight." : "You're next at the rail. Jersey lands after this fight."
+        };
+      }
+      const core="Bid received. Jersey lands on this fight.";
+      return {
+        plate: name ? "Bid received · "+name+" · jersey lands on this fight" : core,
+        note: name
+          ? "Bid received. "+name+" is the next jersey. Jersey lands on this fight. Seat and spectate stay free."
+          : core+" Seat and spectate stay free.",
+        banner: name ? "Bid received · "+name+" · watch this fight" : "Bid received. Watch this fight.",
+        say: name ? "Bid received. "+name+" · jersey lands on this fight." : core,
+        tick: name ? name+" · jersey lands on this fight." : "Jersey lands on this fight."
+      };
+    }
+    if(held){
+      const core="Your bid is at the card rail. If Light $20 clears, you're next — jersey lands after this fight.";
+      return {
+        plate: name ? name+" is at the card rail. If Light $20 clears, you're next — jersey lands after this fight." : core,
+        note: name
+          ? name+" is at the card rail. If Light $20 clears, you're next — jersey lands after this fight. Seat and spectate stay free."
+          : core+" Seat and spectate stay free.",
+        banner: name ? name+" is at the rail · watch this fight" : "Your bid is at the rail. Watch this fight.",
+        say: name ? name+" is at the card rail." : "Your bid is at the card rail.",
+        tick: name ? name+" at the card rail." : "Bid at the card rail."
+      };
+    }
+    const core="Your URL or @handle is at the card rail. If Light $20 clears, this plate wears that jersey.";
+    return {
+      plate: name ? name+" is at the card rail. If Light $20 clears, this plate wears that jersey." : "Your bid is at the card rail. Jersey path is this plate.",
+      note: name
+        ? name+" is at the card rail. If Light $20 clears, this plate wears that jersey. Seat and spectate stay free."
+        : core+" Seat and spectate stay free.",
+      banner: name ? name+" is at the rail · watch this fight" : "Your bid is at the rail. Watch this fight.",
+      say: name ? name+" is at the card rail." : "Your bid is at the card rail.",
+      tick: name ? name+" at the card rail." : "Bid at the card rail."
+    };
+  }
   function paintReturn(kind, opt){
     const announce=opt && opt.announce;
     const bid=readBid();
     const face=bidFace(bid && bid.raw);
+    const held=$plate.classList.contains("is-live");
     if(bid && $bid && !$bid.value) $bid.value=bid.raw.slice(0,240);
     $plate.classList.remove("is-return","is-pending");
     $plate.removeAttribute("data-return");
@@ -1123,11 +1216,13 @@
       $unlock.textContent="Card rail closed. Type the URL or @handle again.";
       if($sponsorReturn){
         $sponsorReturn.hidden=false;
-        $sponsorReturn.textContent="Card rail closed. This fight still wears FreedomOS. Seat stays free.";
+        $sponsorReturn.textContent=held
+          ? "Card rail closed. This fight still wears FreedomOS. Seat stays free."
+          : "Card rail closed. The Light slot is still open. Seat stays free.";
       }
       if($sponsorNote) $sponsorNote.textContent="Card rail closed. Seat and spectate stay free. Your URL or @handle is the bid. Stripe takes the card.";
-      if($ghostEmpty && !$plate.classList.contains("is-live")) $ghostEmpty.textContent="No bid yet — be the first";
-      $plate.setAttribute("aria-label", $plate.classList.contains("is-live")?"This fight sponsored by FreedomOS":"Sponsor this fight, $20");
+      if($ghostEmpty && !held) $ghostEmpty.textContent=openPlateCopy().empty;
+      $plate.setAttribute("aria-label", held?"This fight sponsored by FreedomOS. This fight. Next Light open — $20 names the next fight.":openPlateCopy().aria);
       syncSponsor();
       if(announce){
         say("Card rail closed. Same fight.");
@@ -1136,7 +1231,7 @@
       return;
     }
     $plate.classList.add("is-return");
-    if(!$plate.classList.contains("is-live")) $plate.classList.add("is-pending");
+    if(!held) $plate.classList.add("is-pending");
     $plate.dataset.return="1";
     if($sponsor) $sponsor.classList.add("is-return");
     ctaMode="watch";
@@ -1147,36 +1242,23 @@
     $unlock.setAttribute("role","button");
     $unlock.tabIndex=0;
     const paid=kind==="paid";
+    const copy=returnCopy(kind, held, face);
     if($sponsorH2) $sponsorH2.textContent=paid?"Your bid is in":"Your bid is at the rail";
-    const plateLine=paid
-      ? (face ? "Bid received · "+face+" · jersey lands on this fight" : "Bid received. Jersey lands on this fight.")
-      : (face ? face+" is at the card rail. Jersey path is this plate." : "Your bid is at the card rail. Jersey path is this plate.");
-    if($ghostEmpty) $ghostEmpty.textContent=plateLine;
-    $plate.setAttribute("aria-label", plateLine);
-    if($sponsorNote) $sponsorNote.textContent=paid
-      ? (face
-        ? "Bid received. "+face+" is the next jersey. This fight still wears FreedomOS until that paint. Seat and spectate stay free."
-        : "Bid received. Jersey lands on this fight. This fight still wears FreedomOS until that paint. Seat and spectate stay free.")
-      : (face
-        ? face+" is at the card rail. If Light $20 clears, this plate wears that jersey. Seat and spectate stay free."
-        : "Your URL or @handle is at the card rail. If Light $20 clears, this plate wears that jersey. Seat and spectate stay free.");
+    if($ghostEmpty) $ghostEmpty.textContent=copy.plate;
+    $plate.setAttribute("aria-label", copy.plate);
+    if($sponsorNote) $sponsorNote.textContent=copy.note;
     if($sponsorReturn){
       $sponsorReturn.hidden=false;
-      $sponsorReturn.textContent=paid
-        ? (face ? "Bid received · "+face+" · watch this fight" : "Bid received. Watch this fight.")
-        : (face ? face+" is at the rail · watch this fight" : "Your bid is at the rail. Watch this fight.");
+      $sponsorReturn.textContent=copy.banner;
     }
     if(announce){
       if(paid){
         sting("BID RECEIVED","lime");
         clearTimeout(sting.tid);
         sting.tid=setTimeout(()=>{ $sting.hidden=true; $sting.textContent=""; $sting.className=""; }, 2200);
-        say(face ? "Bid received. "+face+" · jersey lands on this fight." : "Bid received. Jersey lands on this fight.");
-        tick("BID", face ? esc(face)+" · jersey lands on this fight." : "Jersey lands on this fight.");
-      } else {
-        say(face ? face+" is at the card rail." : "Your bid is at the card rail.");
-        tick("BID", face ? esc(face)+" at the card rail." : "Bid at the card rail.");
       }
+      say(copy.say);
+      tick("BID", esc(copy.tick));
     }
   }
   function paintGhost(){
@@ -1187,17 +1269,24 @@
     dash.textContent="___";
     $jersey.appendChild(dash);
     $plate.classList.remove("is-live");
+    $plate.classList.add("is-open");
     $plate.dataset.empty="true";
     $plate.setAttribute("role","button");
     $plate.tabIndex=0;
-    $plate.setAttribute("aria-label","Sponsor this fight, $20");
+    const open=openPlateCopy();
+    $plate.setAttribute("aria-label", open.aria);
+    if($ghostKicker) $ghostKicker.textContent=open.kicker;
+    if($ghostScope) $ghostScope.hidden=true;
+    if($ghostNext) $ghostNext.hidden=true;
+    if($ghostEmpty) $ghostEmpty.textContent=open.empty;
+    if($ghostBid) $ghostBid.textContent=open.bid;
     fightLight=0;
     fightJersey="";
     paintLightLine(false);
     $plate.classList.remove("is-pending","is-return");
     $plate.removeAttribute("data-return");
-    if($ghostEmpty) $ghostEmpty.textContent="No bid yet — be the first";
-    if($sponsorNote) $sponsorNote.textContent="Your URL or @handle is the bid. Stripe takes the card. A paid, pledge-clean bid lands on this fight. Seat and spectate stay free. House lights stay until a paid bid lands.";
+    if($sponsorNote) $sponsorNote.textContent="The Light slot is open. $20 puts your name and logo on this fight. Seat and spectate stay free. Stripe takes the card. A paid, pledge-clean bid takes the plate.";
+    if($costnote) $costnote.textContent="House spent stays $0.00. Light $20.00 puts a name on this fight.";
     paintJerseys("", "");
     paintStakes();
   }
@@ -1221,17 +1310,21 @@
     if(url){ label.href=url; label.target="_blank"; label.rel="noopener noreferrer"; }
     $jersey.appendChild(label);
     $plate.classList.add("is-live");
-    $plate.classList.remove("is-pending");
+    $plate.classList.remove("is-open","is-pending");
     $plate.removeAttribute("data-return");
     $plate.dataset.empty="false";
     $plate.removeAttribute("role");
     $plate.removeAttribute("tabindex");
-    $plate.setAttribute("aria-label","This fight sponsored by "+(name||"Sponsor"));
+    if($ghostKicker) $ghostKicker.textContent="This fight sponsored by";
+    if($ghostScope){ $ghostScope.hidden=false; $ghostScope.textContent="This fight"; }
+    if($ghostNext) $ghostNext.hidden=false;
     const lightN=s && Number(s.light);
     fightLight=(Number.isFinite(lightN) && lightN>0) ? lightN : LIGHT_SKU;
     fightJersey=name||"FreedomOS";
+    $plate.setAttribute("aria-label","This fight sponsored by "+(name||"Sponsor")+". This fight. Next Light open — $20 names the next fight.");
     paintLightLine(true);
-    if($sponsorNote) $sponsorNote.textContent="This fight is named by "+(name||"FreedomOS")+". Seat and spectate stay free. Your URL or @handle is the next bid. Stripe takes the card. A paid, pledge-clean bid takes the plate.";
+    if($sponsorNote) $sponsorNote.textContent="This fight is named by "+(name||"FreedomOS")+". This fight. Seat and spectate stay free. Your URL or @handle is the next bid. Stripe takes the card. A paid, pledge-clean bid takes the plate.";
+    if($costnote) $costnote.textContent="House spent stays $0.00. Light $20.00 on this fight is the jersey.";
     paintJerseys(name||"FreedomOS", url||"https://getfreedomos.com");
     paintStakes();
     if(returnKind) paintReturn(returnKind);
@@ -1249,6 +1342,16 @@
     if($plate.dataset.empty!=="true") return;
     if(e.key!=="Enter" && e.key!==" ") return;
     e.preventDefault();
+    openBidField();
+  });
+  if($ghostBid) $ghostBid.addEventListener("click", e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    openBidField();
+  });
+  if($ghostNextBid) $ghostNextBid.addEventListener("click", e=>{
+    e.preventDefault();
+    e.stopPropagation();
     openBidField();
   });
   window.AG_FIGHT_SPONSOR={name:"FreedomOS",url:"https://getfreedomos.com",logo:"https://getfreedomos.com/logo/f/f-logo-64x64.png",light:20};
