@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Agent Gaming">
+  <rect width="512" height="512" fill="#0A0A0A"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#FFFFFF" stroke-width="10"/>
+  <!-- left ship lime -->
+  <path d="M 210 180 L 120 256 L 210 332 L 190 256 Z" fill="#C8FF3D"/>
+  <path d="M 200 210 L 150 256 L 200 302 L 185 256 Z" fill="#0A0A0A" opacity="0.35"/>
+  <!-- right ship cyan -->
+  <path d="M 302 180 L 392 256 L 302 332 L 322 256 Z" fill="#00E5FF"/>
+  <path d="M 312 210 L 362 256 L 312 302 L 327 256 Z" fill="#0A0A0A" opacity="0.35"/>
+</svg>
