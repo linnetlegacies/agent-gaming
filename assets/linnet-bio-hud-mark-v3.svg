@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Do Good For Your Body — linnet and evening close">
+  <g fill="#34A798" transform="translate(64 66)">
+    <!-- Crescent body (evening / closed in peace) -->
+    <path d="M26 2
+      A 30 30 0 1 1 -22 -26
+      A 22 22 0 1 0 26 2 Z"/>
+    <!-- Head -->
+    <circle cx="-20" cy="-28" r="11"/>
+    <!-- Beak -->
+    <path d="M-29 -30 L-41 -26 L-29 -22 Z"/>
+    <!-- Eye (knockout) -->
+    <circle cx="-22" cy="-30" r="2.2" fill="#FFFFFF"/>
+    <!-- Tail tip continuation of crescent -->
+    <path d="M18 8 C28 14 32 28 28 36 C22 26 18 16 14 10 Z"/>
+  </g>
+</svg>
